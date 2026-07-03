@@ -1,0 +1,26 @@
+{
+  "name": "simple-admin",
+  "version": "0.1.0",
+  "description": "A vanilla-JS, no-build, web-components clone of react-admin.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./theme/*": "./src/theme/*"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.61.1"
+  },
+  "license": "MIT"
+}

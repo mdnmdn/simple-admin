@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>simple-admin — dist bundle example</title>
+  <!-- The ONLY two simple-admin files a real consuming app needs to reference (built via
+       `npm run build` / scripts/build.mjs). Everything else in this repo (core/, components/,
+       fields/, inputs/, providers/, theme/ source) is already bundled into these two files. -->
+  <link rel="stylesheet" href="../../dist/simple-admin.css" />
+</head>
+<body>
+  <sa-admin id="admin" title="Blog Admin (dist bundle)" require-auth>
+    <sa-resource name="posts" record-representation="title">
+      <sa-list sort-field="published_at" sort-order="DESC" per-page="10" row-click="edit">
+        <sa-filters>
+          <sa-search-input source="q" always-on></sa-search-input>
+        </sa-filters>
+        <sa-datagrid>
+          <sa-text-field source="id"></sa-text-field>
+          <sa-text-field source="title" label="Title" sortable></sa-text-field>
+          <sa-reference-field source="author_id" reference="authors" link="show">
+            <sa-text-field source="name"></sa-text-field>
+          </sa-reference-field>
+          <sa-boolean-field source="is_published" label="Published"></sa-boolean-field>
+          <sa-date-field source="published_at" sortable></sa-date-field>
+        </sa-datagrid>
+        <sa-bulk-delete-button></sa-bulk-delete-button>
+      </sa-list>
+
+      <sa-create redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="title" validate="required|minLength:3"></sa-text-input>
+          <sa-reference-input source="author_id" reference="authors">
+            <sa-select-input option-text="name"></sa-select-input>
+          </sa-reference-input>
+          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
+        </sa-simple-form>
+      </sa-create>
+
+      <sa-edit redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="title" validate="required|minLength:3"></sa-text-input>
+          <sa-reference-input source="author_id" reference="authors">
+            <sa-select-input option-text="name"></sa-select-input>
+          </sa-reference-input>
+          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
+        </sa-simple-form>
+      </sa-edit>
+    </sa-resource>
+
+    <sa-resource name="authors" record-representation="name">
+      <sa-list sort-field="name" sort-order="ASC" per-page="10" row-click="edit">
+        <sa-datagrid>
+          <sa-text-field source="name" sortable></sa-text-field>
+          <sa-email-field source="email"></sa-email-field>
+        </sa-datagrid>
+      </sa-list>
+      <sa-create redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="name" validate="required"></sa-text-input>
+          <sa-email-input source="email" validate="required|email"></sa-email-input>
+        </sa-simple-form>
+      </sa-create>
+      <sa-edit redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="name" validate="required"></sa-text-input>
+          <sa-email-input source="email" validate="required|email"></sa-email-input>
+        </sa-simple-form>
+      </sa-edit>
+    </sa-resource>
+  </sa-admin>
+
+  <script type="module">
+    // Only import from the bundle here — the two providers below are plain app-supplied objects
+    // (a real app would write/import its own the same way), not part of the library itself.
+    import '../../dist/simple-admin.js';
+    import { createMockDataProvider, defaultSeedData } from '../mock-data-provider.js';
+    import { createLocalAuthProvider } from '../../src/auth/localAuthProvider.js';
+
+    const admin = document.getElementById('admin');
+    admin.dataProvider = createMockDataProvider(defaultSeedData);
+    admin.authProvider = createLocalAuthProvider(); // demo login: admin / admin
+  </script>
+</body>
+</html>

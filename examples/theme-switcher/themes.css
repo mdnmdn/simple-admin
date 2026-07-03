@@ -1,0 +1,101 @@
+/*
+ * themes.css — three runtime-switchable themes for the theme-switcher example (manual doc
+ * `_docs/manual/07-personalizing-controls.md` §4, "Runtime-switchable themes").
+ *
+ * Gated behind a single `data-theme` attribute on <html>, written by `setTheme(name)` in
+ * index.html. Every token here is one of the --sa-* custom properties actually consumed by
+ * src/theme/base.css (buttons, datagrid, inputs, appbar, menu, login card, focus ring, radius),
+ * so flipping the attribute reskins the whole mounted app with no re-render.
+ */
+
+:root,
+[data-theme='light'] {
+  --sa-primary: #18181b;
+  --sa-primary-foreground: #ffffff;
+  --sa-background: #ffffff;
+  --sa-foreground: #09090b;
+  --sa-muted: #f4f4f5;
+  --sa-muted-foreground: #71717a;
+  --sa-border: #e5e7eb;
+  --sa-accent: rgba(0, 0, 0, 0.05);
+  --sa-secondary: #f4f4f5;
+  --sa-secondary-foreground: #18181b;
+  --sa-destructive: #ef4444;
+  --sa-destructive-foreground: #ffffff;
+  --sa-ring: #a1a1aa;
+  --sa-radius: 0.5rem;
+}
+
+[data-theme='dark'] {
+  --sa-primary: #f4f4f5;
+  --sa-primary-foreground: #18181b;
+  --sa-background: #0a0a0a;
+  --sa-foreground: #fafafa;
+  --sa-muted: #18181b;
+  --sa-muted-foreground: #a1a1aa;
+  --sa-border: #27272a;
+  --sa-accent: rgba(255, 255, 255, 0.08);
+  --sa-secondary: #27272a;
+  --sa-secondary-foreground: #fafafa;
+  --sa-destructive: #f87171;
+  --sa-destructive-foreground: #18181b;
+  --sa-ring: #52525b;
+  --sa-radius: 0.375rem;
+}
+
+[data-theme='ocean'] {
+  --sa-primary: #0891b2;
+  --sa-primary-foreground: #ffffff;
+  --sa-background: #f0fdfa;
+  --sa-foreground: #134e4a;
+  --sa-muted: #ccfbf1;
+  --sa-muted-foreground: #0f766e;
+  --sa-border: #99f6e4;
+  --sa-accent: rgba(8, 145, 178, 0.1);
+  --sa-secondary: #cffafe;
+  --sa-secondary-foreground: #155e75;
+  --sa-destructive: #dc2626;
+  --sa-destructive-foreground: #ffffff;
+  --sa-ring: #22d3ee;
+  --sa-radius: 1rem;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Theme switcher toolbar (not part of the library — just this demo's chrome)
+ * ------------------------------------------------------------------------------------------- */
+
+.theme-switcher {
+  position: fixed;
+  top: calc(var(--sa-spacing, 0.25rem) * 3);
+  right: calc(var(--sa-spacing, 0.25rem) * 4);
+  z-index: 1000;
+  display: flex;
+  gap: calc(var(--sa-spacing, 0.25rem) * 2);
+  padding: calc(var(--sa-spacing, 0.25rem) * 2);
+  background: var(--sa-background);
+  border: 1px solid var(--sa-border);
+  border-radius: var(--sa-radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.theme-switcher__btn {
+  padding: calc(var(--sa-spacing, 0.25rem) * 2) calc(var(--sa-spacing, 0.25rem) * 3);
+  border: 1px solid var(--sa-border);
+  border-radius: calc(var(--sa-radius) - 0.125rem);
+  background: var(--sa-secondary);
+  color: var(--sa-secondary-foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-switcher__btn:hover {
+  opacity: 0.9;
+}
+
+.theme-switcher__btn--active {
+  background: var(--sa-primary);
+  color: var(--sa-primary-foreground);
+  border-color: var(--sa-primary);
+}

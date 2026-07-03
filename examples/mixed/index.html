@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>simple-admin — mixed syntax example</title>
+  <link rel="stylesheet" href="../../src/theme/base.css" />
+  <link rel="stylesheet" href="../../src/theme/shadcn.css" />
+</head>
+<body>
+  <!--
+    Mixed syntax: the "authors" resource is authored entirely in HTML (real <sa-resource> markup,
+    same as examples/html-only). The "posts" resource is declared purely via JS config further
+    down and mounted programmatically by <sa-admin> alongside it — both share the exact same
+    <sa-admin>/registry/router, proving the two syntaxes are interchangeable at the same level
+    rather than one being a special case of the other (doc 10 §2.4 "mixing syntaxes").
+  -->
+  <sa-admin id="admin" title="Blog Admin (mixed)" require-auth>
+    <sa-resource name="authors" record-representation="name">
+      <sa-list sort-field="name" sort-order="ASC" per-page="10" row-click="edit">
+        <sa-datagrid>
+          <sa-text-field source="id"></sa-text-field>
+          <sa-text-field source="name" sortable></sa-text-field>
+          <sa-email-field source="email"></sa-email-field>
+        </sa-datagrid>
+      </sa-list>
+
+      <sa-create redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="name" validate="required"></sa-text-input>
+          <sa-email-input source="email" validate="required|email"></sa-email-input>
+        </sa-simple-form>
+      </sa-create>
+
+      <sa-edit redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="name" validate="required"></sa-text-input>
+          <sa-email-input source="email" validate="required|email"></sa-email-input>
+        </sa-simple-form>
+      </sa-edit>
+
+      <sa-show>
+        <sa-simple-show-layout>
+          <sa-text-field source="name"></sa-text-field>
+          <sa-email-field source="email"></sa-email-field>
+        </sa-simple-show-layout>
+      </sa-show>
+    </sa-resource>
+  </sa-admin>
+
+  <script type="module">
+    import SimpleAdmin, { f, i } from '../../src/index.js';
+    import { createMockDataProvider, defaultSeedData } from '../mock-data-provider.js';
+    import { createLocalAuthProvider } from '../../src/auth/localAuthProvider.js';
+
+    // "posts" declared entirely via JS config — no <sa-resource name="posts"> markup exists
+    // anywhere in this page. <sa-admin> creates it on demand from the registry the same way it
+    // would for a pure JS-config app (components/admin.js _mountConfiguredView).
+    SimpleAdmin.resource('posts', {
+      recordRepresentation: 'title',
+      list: {
+        sort: { field: 'published_at', order: 'DESC' },
+        perPage: 10,
+        rowClick: 'edit',
+        filters: [i.search({ source: 'q', alwaysOn: true })],
+        columns: [
+          f.text({ source: 'id' }),
+          f.text({ source: 'title', label: 'Title', sortable: true }),
+          f.reference({
+            source: 'author_id',
+            reference: 'authors',
+            link: 'show',
+            child: f.text({ source: 'name' }),
+          }),
+          f.boolean({ source: 'is_published', label: 'Published' }),
+          f.date({ source: 'published_at', sortable: true }),
+        ],
+        bulkActions: ['delete'],
+      },
+      create: {
+        redirect: 'list',
+        inputs: [
+          i.text({ source: 'title', validate: 'required' }),
+          i.text({ source: 'body', multiline: true }),
+          i.reference({ source: 'author_id', reference: 'authors', child: i.select({ optionText: 'name' }) }),
+          i.boolean({ source: 'is_published', label: 'Published' }),
+          i.date({ source: 'published_at', validate: 'required' }),
+        ],
+      },
+      edit: {
+        redirect: 'list',
+        inputs: [
+          i.text({ source: 'title', validate: 'required' }),
+          i.text({ source: 'body', multiline: true }),
+          i.reference({ source: 'author_id', reference: 'authors', child: i.select({ optionText: 'name' }) }),
+          i.boolean({ source: 'is_published', label: 'Published' }),
+          i.date({ source: 'published_at', validate: 'required' }),
+        ],
+      },
+      show: {
+        fields: [
+          f.text({ source: 'title' }),
+          f.text({ source: 'body' }),
+          f.reference({ source: 'author_id', reference: 'authors', link: 'edit', child: f.text({ source: 'name' }) }),
+          f.boolean({ source: 'is_published', label: 'Published' }),
+          f.date({ source: 'published_at' }),
+        ],
+      },
+    });
+
+    const admin = document.getElementById('admin');
+    admin.dataProvider = createMockDataProvider(defaultSeedData);
+    admin.authProvider = createLocalAuthProvider(); // demo login: admin / admin
+  </script>
+</body>
+</html>

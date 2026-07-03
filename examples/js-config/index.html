@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>simple-admin — JS-config example</title>
+  <link rel="stylesheet" href="../../src/theme/base.css" />
+  <link rel="stylesheet" href="../../src/theme/shadcn.css" />
+</head>
+<body>
+  <!-- Pure JS-config syntax: no <sa-*> markup at all. SimpleAdmin.admin(...).mount() creates the
+       whole <sa-admin> subtree, including materializing columns/filters/inputs into the same
+       light-DOM elements the HTML-only example writes by hand (see components/admin.js
+       materializeView()). -->
+  <div id="app"></div>
+
+  <script type="module">
+    import SimpleAdmin, { f, i } from '../../src/index.js';
+    import { createMockDataProvider, defaultSeedData } from '../mock-data-provider.js';
+    import { createLocalAuthProvider } from '../../src/auth/localAuthProvider.js';
+
+    const dataProvider = createMockDataProvider(defaultSeedData);
+    const authProvider = createLocalAuthProvider(); // demo login: admin / admin
+
+    SimpleAdmin.resource('authors', {
+      recordRepresentation: 'name',
+      list: {
+        sort: { field: 'name', order: 'ASC' },
+        perPage: 10,
+        rowClick: 'edit',
+        columns: [
+          f.text({ source: 'id' }),
+          f.text({ source: 'name', sortable: true }),
+          f.email({ source: 'email' }),
+        ],
+      },
+      create: {
+        redirect: 'list',
+        inputs: [
+          i.text({ source: 'name', validate: 'required' }),
+          i.email({ source: 'email', validate: 'required|email' }),
+        ],
+      },
+      edit: {
+        redirect: 'list',
+        inputs: [
+          i.text({ source: 'name', validate: 'required' }),
+          i.email({ source: 'email', validate: 'required|email' }),
+        ],
+      },
+      show: {
+        fields: [f.text({ source: 'name' }), f.email({ source: 'email' })],
+      },
+    });
+
+    SimpleAdmin.resource('posts', {
+      recordRepresentation: 'title',
+      list: {
+        sort: { field: 'published_at', order: 'DESC' },
+        perPage: 10,
+        rowClick: 'edit',
+        filters: [
+          i.search({ source: 'q', alwaysOn: true }),
+          i.boolean({ source: 'is_published', label: 'Published' }),
+        ],
+        columns: [
+          f.text({ source: 'id' }),
+          f.text({ source: 'title', label: 'Title', sortable: true }),
+          f.reference({
+            source: 'author_id',
+            reference: 'authors',
+            link: 'show',
+            child: f.text({ source: 'name' }),
+          }),
+          f.boolean({ source: 'is_published', label: 'Published' }),
+          f.date({ source: 'published_at', sortable: true }),
+        ],
+        bulkActions: ['delete'],
+      },
+      create: {
+        redirect: 'list',
+        inputs: [
+          i.text({ source: 'title', validate: 'required' }),
+          i.text({ source: 'body', multiline: true }),
+          i.reference({ source: 'author_id', reference: 'authors', child: i.select({ optionText: 'name' }) }),
+          i.boolean({ source: 'is_published', label: 'Published' }),
+          i.date({ source: 'published_at', validate: 'required' }),
+        ],
+      },
+      edit: {
+        redirect: 'list',
+        inputs: [
+          i.text({ source: 'title', validate: 'required' }),
+          i.text({ source: 'body', multiline: true }),
+          i.reference({ source: 'author_id', reference: 'authors', child: i.select({ optionText: 'name' }) }),
+          i.boolean({ source: 'is_published', label: 'Published' }),
+          i.date({ source: 'published_at', validate: 'required' }),
+        ],
+      },
+      show: {
+        fields: [
+          f.text({ source: 'title' }),
+          f.text({ source: 'body' }),
+          f.reference({ source: 'author_id', reference: 'authors', link: 'edit', child: f.text({ source: 'name' }) }),
+          f.boolean({ source: 'is_published', label: 'Published' }),
+          f.date({ source: 'published_at' }),
+        ],
+      },
+    });
+
+    SimpleAdmin.admin({
+      title: 'Blog Admin (JS config)',
+      dataProvider,
+      authProvider,
+      requireAuth: true,
+    }).mount('#app');
+  </script>
+</body>
+</html>

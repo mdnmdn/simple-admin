@@ -1,0 +1,29 @@
+/*
+ * theme/shadcn.css — optional preset that maps `--sa-*` custom properties (theme/base.css) onto
+ * shadcn/ui's own design-token names, so a shadcn-themed app (whose `:root`/`.dark` already
+ * define `--primary`, `--border`, `--radius`, etc.) themes simple-admin for free, with zero
+ * `--sa-*` overrides needed.
+ *
+ * Load order: shadcn tokens (yours) -> this file -> theme/base.css (or any order — base.css's
+ * `var(--sa-x, var(--x, default))` fallback chain resolves correctly regardless of cascade order,
+ * as long as both are present before paint).
+ */
+
+:root {
+  --sa-primary: var(--primary, #18181b);
+  --sa-primary-foreground: var(--primary-foreground, #fff);
+  --sa-secondary: var(--secondary, #f4f4f5);
+  --sa-secondary-foreground: var(--secondary-foreground, #18181b);
+  --sa-accent: var(--accent, #f4f4f5);
+  --sa-accent-foreground: var(--accent-foreground, #18181b);
+  --sa-border: var(--border, #e5e7eb);
+  --sa-ring: var(--ring, #a1a1aa);
+  --sa-radius: var(--radius, 0.5rem);
+  --sa-background: var(--background, #fff);
+  --sa-foreground: var(--foreground, #09090b);
+  --sa-muted: var(--muted, #f4f4f5);
+  --sa-muted-foreground: var(--muted-foreground, #71717a);
+  --sa-destructive: var(--destructive, #ef4444);
+  --sa-destructive-foreground: var(--destructive-foreground, #fff);
+  --sa-font-sans: var(--font-sans, inherit);
+}

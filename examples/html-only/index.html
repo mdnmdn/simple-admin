@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>simple-admin — HTML-only example</title>
+  <link rel="stylesheet" href="../../src/theme/base.css" />
+  <link rel="stylesheet" href="../../src/theme/shadcn.css" />
+</head>
+<body>
+  <!--
+    Pure HTML-authoring syntax: every resource/view/field/input is a real custom element in the
+    light DOM. No JS config object anywhere — the only script below wires up a dataProvider/
+    authProvider and hands them to <sa-admin> as properties, which is the one thing that cannot be
+    expressed as a plain attribute (functions aren't serializable into HTML).
+  -->
+  <sa-admin id="admin" title="Blog Admin" require-auth>
+    <sa-resource name="authors" record-representation="name">
+      <sa-list sort-field="name" sort-order="ASC" per-page="10" row-click="edit">
+        <sa-datagrid>
+          <sa-text-field source="id"></sa-text-field>
+          <sa-text-field source="name" sortable></sa-text-field>
+          <sa-email-field source="email"></sa-email-field>
+        </sa-datagrid>
+      </sa-list>
+
+      <sa-create redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="name" validate="required"></sa-text-input>
+          <sa-email-input source="email" validate="required|email"></sa-email-input>
+        </sa-simple-form>
+      </sa-create>
+
+      <sa-edit redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="name" validate="required"></sa-text-input>
+          <sa-email-input source="email" validate="required|email"></sa-email-input>
+        </sa-simple-form>
+      </sa-edit>
+
+      <sa-show>
+        <sa-simple-show-layout>
+          <sa-text-field source="name"></sa-text-field>
+          <sa-email-field source="email"></sa-email-field>
+        </sa-simple-show-layout>
+      </sa-show>
+    </sa-resource>
+
+    <sa-resource name="posts" record-representation="title">
+      <sa-list sort-field="published_at" sort-order="DESC" per-page="10" row-click="edit">
+        <sa-filters>
+          <sa-search-input source="q" always-on></sa-search-input>
+          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
+        </sa-filters>
+        <sa-datagrid>
+          <sa-text-field source="id"></sa-text-field>
+          <sa-text-field source="title" label="Title" sortable></sa-text-field>
+          <sa-reference-field source="author_id" reference="authors" link="show">
+            <sa-text-field source="name"></sa-text-field>
+          </sa-reference-field>
+          <sa-boolean-field source="is_published" label="Published"></sa-boolean-field>
+          <sa-date-field source="published_at" sortable></sa-date-field>
+        </sa-datagrid>
+        <sa-bulk-delete-button></sa-bulk-delete-button>
+      </sa-list>
+
+      <sa-create redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="title" validate="required|minLength:3"></sa-text-input>
+          <sa-text-input source="body" multiline></sa-text-input>
+          <sa-reference-input source="author_id" reference="authors">
+            <sa-select-input option-text="name"></sa-select-input>
+          </sa-reference-input>
+          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
+          <sa-date-input source="published_at" validate="required"></sa-date-input>
+        </sa-simple-form>
+      </sa-create>
+
+      <sa-edit redirect="list">
+        <sa-simple-form>
+          <sa-text-input source="title" validate="required|minLength:3"></sa-text-input>
+          <sa-text-input source="body" multiline></sa-text-input>
+          <sa-reference-input source="author_id" reference="authors">
+            <sa-select-input option-text="name"></sa-select-input>
+          </sa-reference-input>
+          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
+          <sa-date-input source="published_at" validate="required"></sa-date-input>
+        </sa-simple-form>
+      </sa-edit>
+
+      <sa-show>
+        <sa-simple-show-layout>
+          <sa-text-field source="title"></sa-text-field>
+          <sa-text-field source="body"></sa-text-field>
+          <sa-reference-field source="author_id" reference="authors" link="edit">
+            <sa-text-field source="name"></sa-text-field>
+          </sa-reference-field>
+          <sa-boolean-field source="is_published" label="Published"></sa-boolean-field>
+          <sa-date-field source="published_at"></sa-date-field>
+        </sa-simple-show-layout>
+      </sa-show>
+    </sa-resource>
+  </sa-admin>
+
+  <script type="module">
+    import '../../src/index.js';
+    import { createMockDataProvider, defaultSeedData } from '../mock-data-provider.js';
+    import { createLocalAuthProvider } from '../../src/auth/localAuthProvider.js';
+
+    const admin = document.getElementById('admin');
+    // Functions/objects can't be expressed as HTML attributes, so the two providers are the one
+    // thing this "HTML-only" example still sets via JS — everything else above is pure markup.
+    admin.dataProvider = createMockDataProvider(defaultSeedData);
+    admin.authProvider = createLocalAuthProvider(); // demo login: admin / admin
+  </script>
+</body>
+</html>
