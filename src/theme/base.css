@@ -204,6 +204,36 @@ table.sa-datagrid,
   line-height: 1.4;
 }
 
+/* Show layout: a vertical stack of labeled field rows (see SaSimpleShowLayout). */
+.sa-simple-show-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-show__field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sa-spacing) * 1);
+  padding: calc(var(--sa-spacing) * 3) 0;
+  border-bottom: 1px solid var(--sa-border, var(--border, #e5e7eb));
+}
+
+.sa-show__field:last-child {
+  border-bottom: none;
+}
+
+.sa-show__label {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--sa-muted-foreground, var(--muted-foreground, #71717a));
+}
+
+.sa-show__value {
+  color: var(--sa-foreground, var(--foreground, #09090b));
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 /* ---------------------------------------------------------------------------------------------
  * Filters
  * ------------------------------------------------------------------------------------------- */
