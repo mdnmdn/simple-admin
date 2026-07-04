@@ -6,6 +6,11 @@
 import { BaseField } from './baseField.js';
 import { registerField, hasResource } from '../core/registry.js';
 import { getReferenceBatcher } from './referenceField.js';
+import {
+  captureChildTemplates,
+  buildChildTemplates,
+  hasChildTemplates,
+} from './templateChildren.js';
 import * as diagnostics from '../core/diagnostics.js';
 
 export class SaReferenceArrayField extends BaseField(HTMLElement) {
@@ -15,7 +20,6 @@ export class SaReferenceArrayField extends BaseField(HTMLElement) {
 
   constructor() {
     super();
-    this._templateChildren = null; // captured once, on first connect
     this._fetchToken = 0;
   }
 
@@ -24,10 +28,9 @@ export class SaReferenceArrayField extends BaseField(HTMLElement) {
   }
 
   connectedCallback() {
-    if (!this._templateChildren) {
-      this._templateChildren = [...this.children];
-      for (const child of this._templateChildren) child.remove();
-    }
+    // Snapshot child templates into `_descriptor.children` so they survive <sa-datagrid>'s per-row
+    // clone — see templateChildren.js.
+    captureChildTemplates(this);
     super.connectedCallback();
   }
 
@@ -83,10 +86,10 @@ export class SaReferenceArrayField extends BaseField(HTMLElement) {
       const chip = document.createElement('span');
       chip.className = 'sa-field__chip';
 
-      if (this._templateChildren.length) {
+      if (hasChildTemplates(this)) {
         const host = document.createElement('sa-reference-array-item');
         host.__recordContext = { record };
-        for (const child of this._templateChildren) host.appendChild(child.cloneNode(true));
+        for (const child of buildChildTemplates(this)) host.appendChild(child);
         chip.appendChild(host);
       } else {
         chip.textContent = String(record.id);

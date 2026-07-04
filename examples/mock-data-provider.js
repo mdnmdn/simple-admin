@@ -27,6 +27,15 @@ const matchesFilter = (record, filter) =>
       // eslint-disable-next-line eqeqeq
       return ids.some((id) => id == record.id);
     }
+    // `q` is react-admin's full-text search convention (what <sa-search-input source="q">
+    // sends): match it against every string field instead of a literal `record.q` property.
+    if (key === 'q') {
+      const needle = String(filterValue).toLowerCase();
+      if (!needle) return true;
+      return Object.values(record).some(
+        (v) => typeof v === 'string' && v.toLowerCase().includes(needle)
+      );
+    }
     const recordValue = record[key];
     if (Array.isArray(filterValue)) {
       return filterValue.includes(recordValue);

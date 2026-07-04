@@ -10,6 +10,20 @@ import { absorbAttributes, applyAttribute } from '../core/descriptor.js';
 import { parseValidatorDSL } from '../validators/index.js';
 import * as diagnostics from '../core/diagnostics.js';
 
+// If `.descriptor` was assigned while this element was NOT yet upgraded (e.g. a field cloned as
+// inert <template> content by a composite field or the datagrid — cloneNode of template content
+// produces un-upgraded custom elements), the assignment became an own data property shadowing the
+// prototype accessor, and the constructor's `_descriptor = {kind}` default then clobbered it on
+// upgrade. Re-run the assignment through the real setter after upgrade so JS-config descriptors
+// survive cloning. No-op for HTML-authored fields (they configure via attributes, not .descriptor).
+const upgradeProperty = (el, prop) => {
+  if (Object.prototype.hasOwnProperty.call(el, prop)) {
+    const value = el[prop];
+    delete el[prop];
+    el[prop] = value;
+  }
+};
+
 export const BaseField = (Base = HTMLElement) =>
   class extends Base {
     // Attributes shared by ALL fields. Concrete fields extend via [...super.observedAttributes, …].
@@ -60,6 +74,7 @@ export const BaseField = (Base = HTMLElement) =>
     }
 
     connectedCallback() {
+      upgradeProperty(this, 'descriptor');
       if (this.isConnected) this._absorbAttributes();
 
       // Diagnostics: missing source (the function field is exempt — it reads the whole record).
@@ -73,12 +88,39 @@ export const BaseField = (Base = HTMLElement) =>
 
       this._recordCtx = findRecordContext(this);
       if (!this._recordCtx) {
-        diagnostics.warn('field-no-record-context', {
-          tag: this.localName,
-          source: this.source,
-        });
+        // Upgrade-order grace: at initial page upgrade this field can connect before its record
+        // host (<sa-datagrid> row, <sa-show> layout, a parked <sa-edit> template, ...) has been
+        // upgraded or has published its context. Retry once on the next microtask — by then the
+        // whole module script (and any host upgrade) has run. Only warn if the field is STILL
+        // connected and STILL context-less, i.e. genuinely misplaced markup.
+        if (!this._retriedRecordContext) {
+          this._retriedRecordContext = true;
+          queueMicrotask(() => {
+            if (!this.isConnected || this._dispose) return;
+            this.connectedCallback();
+          });
+          return;
+        }
+        // Inert template markup never warns: HTML-authored view templates stay connected while
+        // parked in <sa-admin>'s hidden authored host; a resource's non-active sibling views
+        // (e.g. the <sa-show> fields while its list is displayed) stay connected but
+        // display:none; and a field sitting directly under <sa-datagrid> (not inside a rendered
+        // <sa-datagrid-row>) is a column template awaiting the datagrid's own deferred
+        // detach-and-clone build. None of these has a record on purpose.
+        const viewHost = this.closest('sa-list, sa-create, sa-edit, sa-show');
+        const isParkedTemplate =
+          this.closest('[data-sa-part="authored-resources"]') ||
+          (viewHost && viewHost.style.display === 'none') ||
+          (this.closest('sa-datagrid') && !this.closest('sa-datagrid-row'));
+        if (!isParkedTemplate) {
+          diagnostics.warn('field-no-record-context', {
+            tag: this.localName,
+            source: this.source,
+          });
+        }
         return;
       }
+      this._retriedRecordContext = false;
 
       // Render effect: re-runs whenever the record signal (or descriptor version) changes.
       this._dispose = effect(() => {
@@ -101,6 +143,7 @@ export const BaseField = (Base = HTMLElement) =>
       if (this._dispose) this._dispose();
       this._dispose = null;
       this._recordCtx = null;
+      this._retriedRecordContext = false; // fresh one-microtask grace on the next connect
     }
 
     // ---- render seams a concrete field MAY override ----

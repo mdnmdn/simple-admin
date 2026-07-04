@@ -13,18 +13,28 @@ import * as diagnostics from '../core/diagnostics.js';
 
 // Adapter object, NOT createFormController() — filters have no independent values store; they
 // read/write straight through to ListController.filterValues so debouncing stays centralized.
-const createFilterFormStore = (listController) => {
+//
+// Takes a GETTER for the controller, not the controller itself, and every method dereferences it
+// at call time. This lets <sa-filters> keep ONE stable formStore object for the element's whole
+// lifetime while still always writing through the CURRENT ListController: custom-element
+// reaction batches during boot can interleave so that a child input's (re)connect — which caches
+// `this._form = host.formStore` — lands between two <sa-filters> reconnects. With a fresh
+// adapter object per connect, that input ends up committing into the previous, already-disposed
+// controller's filterValues, and typing into the filter silently does nothing.
+const createFilterFormStore = (getListController) => {
   const registry = new Map();
   const errors = signal({});
   const touched = signal({});
 
   return {
-    values: listController.filterValues,
+    get values() {
+      return getListController().filterValues;
+    },
     errors,
     touched,
-    getField: (source) => getByPath(listController.filterValues.get(), source),
-    setField: (source, value) => listController.setFilterValue(source, value),
-    setValues: (next) => listController.setFilters(next),
+    getField: (source) => getByPath(getListController().filterValues.get(), source),
+    setField: (source, value) => getListController().setFilterValue(source, value),
+    setValues: (next) => getListController().setFilters(next),
     getError: () => undefined,
     isTouched: () => false,
     touch: () => {},
@@ -32,7 +42,7 @@ const createFilterFormStore = (listController) => {
     unregister: (source) => registry.delete(source),
     validateField: () => undefined,
     validateAll: () => true,
-    reset: () => listController.setFilters({}),
+    reset: () => getListController().setFilters({}),
   };
 };
 
@@ -57,7 +67,12 @@ export class SaFilters extends HTMLElement {
     if (!this._listController) return; // degrade: no ancestor <sa-list>, nothing to bind to.
 
     // Publish before any sa-*-input child connects and looks up `.formStore`.
-    this.formStore = createFilterFormStore(this._listController);
+    // The adapter is created ONCE per element and dereferences this._listController at call
+    // time, so inputs that cached `formStore` during ANY earlier connect still write through the
+    // live controller after a reconnect replaced it (see createFilterFormStore's comment).
+    if (!this.formStore) {
+      this.formStore = createFilterFormStore(() => this._listController);
+    }
     this.__formContext = this.formStore;
 
     if (!this._domBuilt) {

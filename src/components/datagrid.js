@@ -10,6 +10,7 @@ import { effect } from '../core/signal.js';
 import { findListContext } from '../core/context.js';
 import { navigate } from '../core/router.js';
 import { humanize } from '../core/util.js';
+import { cloneWithDescriptors } from '../fields/templateChildren.js';
 import * as diagnostics from '../core/diagnostics.js';
 
 const BULK_BUTTON_RE = /^sa-bulk-.+-button$/;
@@ -280,7 +281,7 @@ export class SaDatagrid extends HTMLElement {
       const td = document.createElement('td');
       td.className = 'sa-datagrid__cell';
       td.setAttribute('data-sa-part', 'cell');
-      td.appendChild(template.cloneNode(true));
+      td.appendChild(cloneWithDescriptors(template));
       row.appendChild(td);
     }
 

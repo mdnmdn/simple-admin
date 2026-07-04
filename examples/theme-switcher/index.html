@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>simple-admin — theme-switcher example</title>
+  <!-- Inline favicon so the browser doesn't request /favicon.ico (a guaranteed console 404
+       when serving the repo root with a bare static file server). -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎨</text></svg>" />
   <!-- Structural styles (layout/scaffolding) -->
   <link rel="stylesheet" href="../../src/theme/base.css" />
   <!-- Token overrides for the three runtime-switchable themes, per

@@ -84,6 +84,32 @@ export const effect = (fn) => {
   };
 };
 
+// Run `fn` with dependency tracking suspended: signal reads inside it subscribe NOTHING, even
+// when called from inside a running effect. Effects *created* inside `fn` still track their own
+// dependencies normally (each effect's _run manages currentEffect itself) — only reads belonging
+// to `fn`'s own synchronous body are untracked.
+//
+// Why this exists: a coarse orchestration effect (e.g. <sa-admin>'s route effect) may
+// synchronously call into arbitrary component code — connectedCallbacks, renderControl(), form
+// wiring — that legitimately reads signals for one-shot setup. Without masking, every such read
+// subscribes the ORCHESTRATION effect, so a later write to any of those signals re-runs the whole
+// orchestration (in the route effect's case: a full view remount, which re-writes the same
+// signals — an infinite remount loop that froze the page; see verification-plan.md).
+// The effect stack must be masked too, not just currentEffect: a nested effect() created inside
+// `fn` restores currentEffect from the stack when it finishes, which would resurrect the outer
+// effect mid-untracked-window.
+export const untracked = (fn) => {
+  const prevEffect = currentEffect;
+  const prevStack = effectStack.splice(0, effectStack.length);
+  currentEffect = null;
+  try {
+    return fn();
+  } finally {
+    effectStack.push(...prevStack);
+    currentEffect = prevEffect;
+  }
+};
+
 export const computed = (fn) => {
   const cell = signal(undefined);
   effect(() => {

@@ -326,6 +326,126 @@ These weren't exercised by static reading and are the most likely place a real b
   (same markup, different script source), since that's the concrete proof the two-file build is a
   true drop-in.
 
+## Real-browser verification pass (Chromium/Playwright) — bugs found and fixed
+
+This pass finally ran the examples in a real Chromium (headless, Playwright), focusing on
+`examples/theme-switcher` and then re-verifying with `scripts/verify-jsdom.mjs` (now 13/13) and
+the other examples. Every fix below was diagnosed against the running browser (CDP pause for the
+freeze; temporary `signal.js` instrumentation for the effect loop), then confirmed fixed in both
+Chromium and jsdom.
+
+### 1. Page FROZE on list -> edit transitions (infinite remount loop) — the big one
+
+Navigating between views of the same resource (e.g. `#/products` -> `#/products/1`, exactly what
+`row-click="edit"` does) hard-froze the tab: the main thread never yielded again. Root cause: the
+`<sa-admin>` route effect ran `_handleRoute()` synchronously inside its own tracking window, so
+ANY tracked signal read during view mounting subscribed the ROUTE EFFECT itself. Reference/array
+inputs' `renderControl()` reads `formStore.getField()` (a tracked `values.get()`) synchronously at
+connect — so the route effect became a subscriber of the form's `values` signal; mounting also
+WRITES `values` (`<sa-create>`'s record reset, `default-value` seeding), which re-queued the route
+effect -> full remount -> same writes -> infinite microtask flush loop. Resources whose forms had
+no reference/array inputs (authors) didn't trigger the read and were immune — products/posts froze.
+**Fix**: new `untracked()` primitive in `core/signal.js` (masks `currentEffect` AND the effect
+stack, so nested `effect()` creation can't resurrect the outer effect); the route effect now runs
+`untracked(() => this._handleRoute(route))` — it depends on the route and nothing else. This also
+unblocked `verify-jsdom.mjs`, which was hanging forever in the same loop (its Scenario B filter
+interaction), never reaching its last six checks.
+
+### 2. Reference/array fields rendered raw ids in datagrid rows (template lost on clone)
+
+`sa-reference-field`/`sa-reference-array-field`/`sa-array-field` captured their authored child
+templates into an instance property (`this._templateChildren`) and DETACHED them. `<sa-datagrid>`
+stamps rows with `template.cloneNode(true)` — which copies DOM only, not instance properties — so
+every row clone arrived template-less and fell back to rendering the raw id ("1" instead of
+"Electronics"). **Fix**: `src/fields/templateChildren.js` — the captured template now lives in an
+inert `<template data-sa-template>` CHILD (part of the DOM, deep-cloned with the element); render
+passes clear around it and clone from its content.
+
+### 3. Typing into filters did nothing (stale FormStore binding), and `q` wasn't full-text
+
+Two independent halves. (a) `<sa-filters>` rebuilt its adapter `formStore` on every reconnect,
+while a child input caches `this._form` at ITS connect — custom-element reaction batches during
+boot can interleave so the input's last bind lands between two `<sa-filters>` reconnects, leaving
+it committing into the previous, already-disposed ListController. **Fix**: one stable adapter per
+element that dereferences `this._listController` at call time. The same stale-binding class was
+then applied to `sa-simple-form`/`sa-tabbed-form` (one `FormStore` per element, reused across
+reconnects; per-mount record state via `formStore.reset()`), which fixed validateAll seeing an
+empty registry in jsdom. (b) `examples/mock-data-provider.js` treated `q` as a literal record
+field; it now does react-admin-style full-text matching across string fields.
+
+### 4. Failed submits showed no validation errors
+
+`validateAll()` set errors but never touched fields, and inputs only DISPLAY an error once its
+field is touched — so submitting a pristine form with missing required fields showed nothing.
+**Fix**: `validateAll()` now marks every registered source touched (react-admin submit semantics).
+
+### 5. Startup console noise (errors + ~40 warnings) on the documented boot pattern
+
+The documented HTML-authoring boot (`admin.dataProvider = ...` after the import that upgrades the
+tree) always logged `no-data-provider`, five `provider-method-missing` errors, and dozens of
+`field-no-record-context`/`input-no-form` warnings before the reboot fix re-mounted everything.
+All were transient false alarms. **Fixes**: one-microtask grace before the `no-data-provider`
+diagnostic (admin.js); `runFetch` re-reads the registry provider and retries once before
+diagnosing (store.js); fields/inputs retry context lookup once per connect, and never warn for
+inert template markup (parked authored host, `display:none` sibling views, datagrid column
+templates awaiting capture) or when a form host element exists but hasn't wired yet. A genuinely
+misplaced field/input still warns. The theme-switcher example now boots with a fully clean console.
+
+### verify-jsdom.mjs hardening (test-artifact fixes, found while chasing the above)
+
+Document-order `querySelector`s were hitting parked duplicates (first `sa-reference-field` was a
+parked template; first checkbox belonged to the hidden authors list), the reference-resolution
+check raced its fixed 300ms sleep (now polls), and the bulk-delete check compared rendered row
+counts — meaningless when more records than the page size exist (now compares provider totals).
+Selectors are now scoped to `.sa-content`. Result: 13/13.
+
+### 6. JS-config datagrids rendered entirely blank cells (cloneNode drops JS descriptors)
+
+A JS-config resource's datagrid rendered the right number of rows with correct headers but EVERY
+cell was empty, plus one `field-missing-source` error per column. Root cause is the cloneNode
+family again: a JS-config-materialized field carries its `source`/type/etc. ONLY on its
+`_descriptor` JS property (admin.js's `createFieldElement` sets `el.descriptor = {...}`, no
+reflecting attribute), and `<sa-datagrid>` stamps each row with `cloneNode(true)`, which copies DOM
++ attributes but never JS state. HTML-authored fields were unaffected (their `source="..."`
+attribute IS cloned and BaseField rebuilds `_descriptor` from it). **Fix**: `cloneWithDescriptors`
+(templateChildren.js) walks the original and clone in lockstep and re-attaches each field's
+descriptor; the datagrid uses it for every column clone. Two follow-on issues surfaced and were
+fixed: (a) cloned `<template>` content is INERT — custom elements inside are never upgraded, so
+setting `.descriptor` on them created a shadowing expando the constructor clobbered on upgrade;
+`BaseField`/`BaseInput` now run `upgradeProperty(this, 'descriptor')` in connectedCallback (the
+same lazy-property shim already used for `record`/`id`/`resource`) so a descriptor assigned
+pre-upgrade survives. (b) The composite fields (reference/reference-array/array) now capture their
+child template as a plain DESCRIPTOR TREE on `_descriptor.children` (read from live upgraded
+children at connect — works for both syntaxes) and rebuild fresh child elements from it each render,
+instead of cloning inert `<template>` content — so a JS-config `<sa-reference-field>`'s nested
+display field resolves correctly inside a datagrid row.
+
+### 7. `<sa-show>` was permanently stuck on "Loading…" when deep-linked / refreshed
+
+Opening a detail URL directly (`#/products/1/show`) — or refreshing the page while on one — left the
+show view frozen on its "Loading…" placeholder with no fields, in every HTML-authored example. Cause:
+`SaShow` re-read `this.childNodes` into `_pending` on EVERY connect and detached them, but the boot
+sequence disconnects+reconnects the view (the dataProvider-set reboot's `_reconnectAuthoredViews`,
+and the resource host being moved into `.sa-content`). The first connect detached the field template
+children; the reconnect then captured an empty child set and could never render them. **Fix**: the
+field templates are captured ONCE into a persistent instance array (like `<sa-datagrid>`'s
+`_fieldTemplates`) that survives reconnects; each connect re-detaches current content and re-runs the
+load, re-appending the preserved templates once the record resolves. Also gave `<sa-show>`/`<sa-edit>`
+the same one-microtask provider grace as the list controller so a deep-linked view no longer logs a
+transient `getOne is not a function` at boot.
+
+### verify-browser.mjs: made the harness actually pass on the working examples
+
+The Playwright harness reported false failures (login input "not visible" timeouts) for
+`html-only`/`mixed`/`dist-bundle`: its `input[type="text"]`/`sa-datagrid-row`/`sa-save-button`
+selectors used `.first()` with no visibility scoping, so they matched hidden PARKED view-template
+elements (create/edit forms and non-active resource lists stay connected but `display:none`) instead
+of the live login form / mounted view. Scoped every interaction selector to the visible `<sa-login>`
+form or `.sa-content` (the mounted view) and to `>> visible=true`, and made the validation-error
+check take the first NON-EMPTY error span. With this (and the source fixes above) all four examples
+drive cleanly: list, sort, filter, reference resolution, create+validation+save, and bulk delete,
+with zero `pageerror`s and no unexpected `[simple-admin]` errors.
+
 ## After this runs
 
 Fold any real bugs found into the source, re-run `node scripts/build.mjs`, and re-run this plan

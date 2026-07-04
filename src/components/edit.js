@@ -98,6 +98,16 @@ export class SaEdit extends HTMLElement {
 
     const dataProvider = getDataProvider();
     if (!dataProvider || typeof dataProvider.getOne !== 'function') {
+      // Boot race: a deep-linked <sa-edit> can connect and fetch before `admin.dataProvider = ...`
+      // runs. Retry once on the next microtask before diagnosing — same grace as <sa-show> and the
+      // list controller (core/store.js).
+      if (!this._providerRetry) {
+        this._providerRetry = true;
+        queueMicrotask(() => {
+          if (this.isConnected && this._id != null && !this.__recordContext) this._fetchRecord();
+        });
+        return;
+      }
       diagnostics.error('provider-method-missing', {
         method: 'getOne',
         resource: this._resource,
@@ -105,6 +115,7 @@ export class SaEdit extends HTMLElement {
       });
       return;
     }
+    this._providerRetry = false;
 
     try {
       const result = await dataProvider.getOne(this._resource, { id: this._id });

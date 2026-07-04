@@ -7,6 +7,7 @@
 
 import { signal, computed, effect } from './signal.js';
 import { getByPath, setByPath, stableStringify } from './util.js';
+import { getDataProvider } from './registry.js';
 import * as diagnostics from './diagnostics.js';
 
 const FILTER_DEBOUNCE_MS = 500;
@@ -34,17 +35,31 @@ export const createListController = (descriptor = {}, { dataProvider } = {}) => 
   let currentAbort = null;
   let debounceTimer = null;
   let disposed = false;
+  let waitedForProvider = false;
 
   const runFetch = async () => {
     if (disposed) return;
     if (!dataProvider || typeof dataProvider.getList !== 'function') {
-      diagnostics.error('provider-method-missing', {
-        method: 'getList',
-        resource,
-        operation: 'list lookup',
-      });
-      isPending.set(false);
-      return;
+      // The registry provider may be published a moment after this controller was created:
+      // HTML-authored <sa-list> elements upgrade (and fetch) during the `import` of index.js,
+      // while `admin.dataProvider = ...` runs a few lines later in the same module script.
+      // Give it one microtask (module scripts finish before microtasks run) before diagnosing.
+      const late = getDataProvider();
+      if (late && typeof late.getList === 'function') {
+        dataProvider = late;
+      } else if (!waitedForProvider) {
+        waitedForProvider = true;
+        queueMicrotask(runFetch);
+        return;
+      } else {
+        diagnostics.error('provider-method-missing', {
+          method: 'getList',
+          resource,
+          operation: 'list lookup',
+        });
+        isPending.set(false);
+        return;
+      }
     }
 
     if (currentAbort) currentAbort.abort();
@@ -235,10 +250,16 @@ export const createFormController = (descriptor = {}, { dataProvider, record } =
   const unregister = (source) => registry.delete(source);
 
   const validateAll = () => {
+    // A submit attempt touches every registered field (react-admin semantics): inputs only
+    // DISPLAY an error once their field is touched, so without this, a failed submit of a
+    // pristine form would set errors that no input ever shows.
+    const nextTouched = { ...touched.peek() };
     let valid = true;
     for (const source of registry.keys()) {
+      nextTouched[source] = true;
       if (validateField(source)) valid = false;
     }
+    touched.set(nextTouched);
     return valid;
   };
 
