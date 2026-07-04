@@ -1,29 +1,118 @@
 /*
- * theme/shadcn.css — optional preset that maps `--sa-*` custom properties (theme/base.css) onto
- * shadcn/ui's own design-token names, so a shadcn-themed app (whose `:root`/`.dark` already
- * define `--primary`, `--border`, `--radius`, etc.) themes simple-admin for free, with zero
- * `--sa-*` overrides needed.
+ * theme/shadcn.css — shadcn/ui preset for simple-admin.
  *
- * Load order: shadcn tokens (yours) -> this file -> theme/base.css (or any order — base.css's
- * `var(--sa-x, var(--x, default))` fallback chain resolves correctly regardless of cascade order,
- * as long as both are present before paint).
+ * Two jobs in one file:
+ *   1. TOKEN BRIDGE — every `--sa-*` variable is mapped onto shadcn/ui's own token name
+ *      (`--primary`, `--border`, `--radius`, `--input`, `--card`, `--sidebar`, ...). If your app
+ *      already defines those (a real shadcn/ui host, `:root` + `.dark`), simple-admin inherits your
+ *      palette, radius, and font for free — including dark mode — with zero `--sa-*` overrides.
+ *   2. STANDALONE DEFAULTS — when the host does NOT define a given shadcn token, each mapping falls
+ *      back to shadcn/ui's own default "neutral" value (in `oklch`), so an app with no shadcn setup
+ *      of its own still gets a faithful shadcn look out of the box, dark theme included.
+ *
+ * Dark mode is activated by either `.dark` (shadcn's convention) or `[data-theme='dark']`
+ * (simple-admin's theming-doc convention) on any ancestor — typically `<html>`.
+ *
+ * Load AFTER theme/base.css. The token bridge is cascade-order-independent (base.css resolves
+ * `var(--sa-x, var(--x, default))` either way), but the "chrome" rules at the bottom refine
+ * base.css's control look and rely on normal source order to win.
  */
 
 :root {
-  --sa-primary: var(--primary, #18181b);
-  --sa-primary-foreground: var(--primary-foreground, #fff);
-  --sa-secondary: var(--secondary, #f4f4f5);
-  --sa-secondary-foreground: var(--secondary-foreground, #18181b);
-  --sa-accent: var(--accent, #f4f4f5);
-  --sa-accent-foreground: var(--accent-foreground, #18181b);
-  --sa-border: var(--border, #e5e7eb);
-  --sa-ring: var(--ring, #a1a1aa);
-  --sa-radius: var(--radius, 0.5rem);
-  --sa-background: var(--background, #fff);
-  --sa-foreground: var(--foreground, #09090b);
-  --sa-muted: var(--muted, #f4f4f5);
-  --sa-muted-foreground: var(--muted-foreground, #71717a);
-  --sa-destructive: var(--destructive, #ef4444);
-  --sa-destructive-foreground: var(--destructive-foreground, #fff);
+  /* Surfaces */
+  --sa-background: var(--background, oklch(1 0 0));
+  --sa-foreground: var(--foreground, oklch(0.145 0 0));
+  --sa-card: var(--card, oklch(1 0 0));
+  --sa-card-foreground: var(--card-foreground, oklch(0.145 0 0));
+  --sa-popover: var(--popover, oklch(1 0 0));
+  --sa-popover-foreground: var(--popover-foreground, oklch(0.145 0 0));
+
+  /* Palette */
+  --sa-primary: var(--primary, oklch(0.205 0 0));
+  --sa-primary-foreground: var(--primary-foreground, oklch(0.985 0 0));
+  --sa-secondary: var(--secondary, oklch(0.97 0 0));
+  --sa-secondary-foreground: var(--secondary-foreground, oklch(0.205 0 0));
+  --sa-muted: var(--muted, oklch(0.97 0 0));
+  --sa-muted-foreground: var(--muted-foreground, oklch(0.556 0 0));
+  --sa-accent: var(--accent, oklch(0.97 0 0));
+  --sa-accent-foreground: var(--accent-foreground, oklch(0.205 0 0));
+  --sa-destructive: var(--destructive, oklch(0.577 0.245 27.325));
+  --sa-destructive-foreground: var(--destructive-foreground, oklch(0.985 0 0));
+
+  /* Lines & focus */
+  --sa-border: var(--border, oklch(0.922 0 0));
+  --sa-input: var(--input, oklch(0.922 0 0));
+  --sa-ring: var(--ring, oklch(0.708 0 0));
+  --sa-radius: var(--radius, 0.625rem);
+
+  /* Sidebar / menu */
+  --sa-sidebar: var(--sidebar, oklch(0.985 0 0));
+  --sa-sidebar-border: var(--sidebar-border, oklch(0.922 0 0));
+
+  /* Typography */
   --sa-font-sans: var(--font-sans, inherit);
+}
+
+.dark,
+[data-theme='dark'] {
+  --sa-background: var(--background, oklch(0.145 0 0));
+  --sa-foreground: var(--foreground, oklch(0.985 0 0));
+  --sa-card: var(--card, oklch(0.205 0 0));
+  --sa-card-foreground: var(--card-foreground, oklch(0.985 0 0));
+  --sa-popover: var(--popover, oklch(0.269 0 0));
+  --sa-popover-foreground: var(--popover-foreground, oklch(0.985 0 0));
+
+  --sa-primary: var(--primary, oklch(0.922 0 0));
+  --sa-primary-foreground: var(--primary-foreground, oklch(0.205 0 0));
+  --sa-secondary: var(--secondary, oklch(0.269 0 0));
+  --sa-secondary-foreground: var(--secondary-foreground, oklch(0.985 0 0));
+  --sa-muted: var(--muted, oklch(0.269 0 0));
+  --sa-muted-foreground: var(--muted-foreground, oklch(0.708 0 0));
+  --sa-accent: var(--accent, oklch(0.269 0 0));
+  --sa-accent-foreground: var(--accent-foreground, oklch(0.985 0 0));
+  --sa-destructive: var(--destructive, oklch(0.704 0.191 22.216));
+  --sa-destructive-foreground: var(--destructive-foreground, oklch(0.985 0 0));
+
+  --sa-border: var(--border, oklch(1 0 0 / 10%));
+  --sa-input: var(--input, oklch(1 0 0 / 15%));
+  --sa-ring: var(--ring, oklch(0.556 0 0));
+
+  --sa-sidebar: var(--sidebar, oklch(0.205 0 0));
+  --sa-sidebar-border: var(--sidebar-border, oklch(1 0 0 / 10%));
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Chrome — small refinements that make base.css's controls read as native shadcn/ui.
+ * Colors still resolve entirely through the `--sa-*` tokens above, so every rule here stays
+ * fully themable; only shadows and focus geometry are hardcoded.
+ * ------------------------------------------------------------------------------------------- */
+
+/* shadcn's focus treatment: a slightly thicker ring with a little more offset. */
+[class*='sa-'] input:focus-visible,
+[class*='sa-'] select:focus-visible,
+[class*='sa-'] textarea:focus-visible,
+.sa-btn:focus-visible {
+  outline: 2px solid var(--sa-ring, var(--ring, oklch(0.708 0 0)));
+  outline-offset: 2px;
+}
+
+/* Buttons carry shadcn's subtle `shadow-xs`; ghost/outline stay flat like their shadcn variants. */
+.sa-btn {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.sa-btn--ghost,
+.sa-btn--outline {
+  box-shadow: none;
+}
+
+/* Inputs get the same `shadow-xs`. Their border already resolves via the dedicated `--sa-input`
+   token (wired in base.css), matching shadcn's separate input-border color. */
+.sa-input input:not([type='checkbox']):not([type='radio']),
+.sa-input select,
+.sa-input textarea,
+[class$='-input'] input:not([type='checkbox']):not([type='radio']),
+[class$='-input'] select,
+[class$='-input'] textarea {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }

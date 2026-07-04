@@ -18,7 +18,7 @@ simple-admin ships two optional CSS files under `src/theme/`:
 ```
 
 - **`base.css`** is the structural stylesheet — layout (grid/flex/spacing), borders, focus states, and just enough button/input chrome to make the default admin usable. It's optional but recommended: without it, simple-admin still works, but you get unstyled markup (block-level elements with no spacing, no borders, browser-default form controls). Every visual value in it is a CSS custom property, so it's meant to be overridden rather than fought with.
-- **`shadcn.css`** is an optional preset, loaded *in addition to* `base.css`, that maps `base.css`'s `--sa-*` custom properties onto shadcn/ui's own token names (`--primary`, `--border`, `--radius`, etc.). If your app already defines those shadcn tokens on `:root`/`.dark`, dropping in `shadcn.css` themes simple-admin to match automatically, with zero `--sa-*` overrides of your own.
+- **`shadcn.css`** is an optional preset, loaded *in addition to* `base.css`, that does two things. First, it maps `base.css`'s `--sa-*` custom properties onto shadcn/ui's own token names (`--primary`, `--border`, `--radius`, `--input`, `--card`, `--sidebar`, etc.): if your app already defines those shadcn tokens on `:root`/`.dark`, dropping in `shadcn.css` themes simple-admin to match automatically, with zero `--sa-*` overrides of your own. Second, for each token the preset *also* carries shadcn/ui's own default "neutral" value (in `oklch`) as the fallback — plus a built-in dark theme — so an app that does **not** already run shadcn still gets a faithful shadcn look, light and dark, out of the box. Dark mode activates on either `.dark` (shadcn's class) or `[data-theme='dark']` (see §4 of `07-personalizing-controls.md`).
 
 Load order between the two doesn't matter — `base.css` reads each `--sa-*` variable via `var(--sa-x, var(--x, <hardcoded-default>))`, so as long as both files (and your own token definitions, if any) are present before first paint, the fallback chain resolves correctly regardless of cascade order. If you skip `shadcn.css` entirely, `base.css` still falls back to shadcn's default token *names* (in case your app defines `--primary`/`--border`/etc. under its own theme without using the preset) and finally to a hardcoded default color if neither is present.
 
@@ -41,8 +41,13 @@ Every design-token variable simple-admin reads, as declared/consumed in `src/the
 | `--sa-spacing` | Base spacing unit; nearly every padding/gap in the sheet is `calc(var(--sa-spacing) * N)` | `--spacing` | `0.25rem` |
 | `--sa-font-sans` | Font stack for the whole admin shell | `--font-sans` | system-font stack (`-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`) |
 | `--sa-font-size` | Base font size on `.sa-admin` | *(none — no shadcn equivalent)* | `0.875rem` |
-| `--sa-background` | Page/card/input background | `--background` | `#fff` |
+| `--sa-background` | Page/input background | `--background` | `#fff` |
 | `--sa-foreground` | Primary text color | `--foreground` | `#09090b` |
+| `--sa-card` | Card surfaces (e.g. the login card); falls back to `--sa-background` | `--card` | *(inherits `--sa-background`)* |
+| `--sa-card-foreground` | Text on card surfaces; falls back to `--sa-foreground` | `--card-foreground` | *(inherits `--sa-foreground`)* |
+| `--sa-input` | Form-control border color; falls back to `--sa-border` | `--input` | *(inherits `--sa-border`)* |
+| `--sa-sidebar` | Side-menu background; falls back to `--sa-muted` | `--sidebar` | *(inherits `--sa-muted`)* |
+| `--sa-sidebar-border` | Side-menu right border; falls back to `--sa-border` | `--sidebar-border` | *(inherits `--sa-border`)* |
 | `--sa-primary` | Appbar background, primary buttons, active form-tab underline | `--primary` | `#18181b` |
 | `--sa-primary-foreground` | Text/icon color on primary-colored surfaces | `--primary-foreground` | `#fff` |
 | `--sa-secondary` | Default button background, field chips | `--secondary` | `#f4f4f5` |
@@ -56,7 +61,7 @@ Every design-token variable simple-admin reads, as declared/consumed in `src/the
 | `--sa-destructive` | Danger button background, validation error text/borders | `--destructive` | `#ef4444` |
 | `--sa-destructive-foreground` | Text on destructive-colored surfaces | `--destructive-foreground` | `#fff` |
 
-`--sa-accent-foreground` is defined by `shadcn.css`'s mapping table for completeness/forward-compatibility but has no consuming rule in the current `base.css`.
+`--sa-accent-foreground`, `--sa-popover`, and `--sa-popover-foreground` are bridged by `shadcn.css` for completeness/forward-compatibility but have no consuming rule in the current `base.css`. The `--sa-card`/`--sa-input`/`--sa-sidebar` family *is* consumed, but each falls back to an existing token (`--sa-background`/`--sa-border`/`--sa-muted`) when unset, so adding them changes nothing until you (or the shadcn preset) give them a distinct value.
 
 ## The class-name vocabulary
 
@@ -101,6 +106,8 @@ To restyle one specific part of the UI, target its class or `data-sa-part` direc
 ```
 
 `shadcn.css` rewrites every `--sa-*` variable to `var(--primary, ...)`, `var(--border, ...)`, `var(--radius, ...)`, and so on, so simple-admin instantly inherits your app's shadcn palette, radius, and font — including dark mode, if your `.dark` class already redefines those shadcn tokens.
+
+**If you just want the shadcn look but don't run shadcn/ui**, the same two-line include still applies — the preset's `oklch` fallbacks supply shadcn's default neutral palette and a ready-made dark theme, so you get the aesthetic (light *and* dark) without defining a single token yourself. Toggle dark by putting `class="dark"` or `data-theme="dark"` on `<html>`.
 
 **If you're theming from scratch** (no shadcn tokens, just a custom look), skip `shadcn.css` and set the `--sa-*` variables directly, or target `sa-*` classes for anything the variables don't cover:
 
