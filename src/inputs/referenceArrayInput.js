@@ -101,6 +101,11 @@ export class SaReferenceArrayInput extends BaseInput(HTMLElement) {
     this._child._descriptor.optionValue = 'id';
     this._child._descriptor.translateChoice = false;
     wrap.appendChild(this._child);
+    // Build the delegate's control explicitly — a real browser dispatches the child's lifecycle
+    // reaction from the PROTOTYPE connectedCallback (which no-ops for a sourceless delegate), not
+    // the instance override patchChildAsDelegate() installs, so the control would otherwise never
+    // render. See the matching note in referenceInput.js.
+    this._child.renderControl();
 
     this.updateControl(this.format(this._form.getField(this.source)));
 

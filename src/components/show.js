@@ -10,6 +10,8 @@
 import { getDataProvider } from '../core/registry.js';
 import { findResourceContext } from '../core/context.js';
 import { currentRoute } from '../core/router.js';
+import { descriptorFromElement } from '../core/descriptor.js';
+import { humanize } from '../core/util.js';
 import * as diagnostics from '../core/diagnostics.js';
 
 export class SaShow extends HTMLElement {
@@ -109,6 +111,41 @@ export class SaSimpleShowLayout extends HTMLElement {
   connectedCallback() {
     this.classList.add('sa-simple-show-layout');
     this.setAttribute('data-sa-part', 'show-layout');
+
+    // Give every field a label and its own row — the layout's whole job ("purely-visual wrapper",
+    // doc 02 §6). Without this the fields render as bare, unlabeled values running together inline
+    // (a field renders only its value; the label lives on the field's descriptor, exactly like a
+    // datagrid uses it for column headers). Read the label from attributes/seed via
+    // descriptorFromElement rather than the field's own `label` getter: this runs in tree order
+    // BEFORE the child fields' connectedCallbacks have populated their `_descriptor`.
+    //
+    // Done at most once per element instance: the rows (and the fields inside them) persist across
+    // the detach/reattach <sa-show> performs on every (re)load — re-wrapping would nest rows.
+    if (this._laidOut) return;
+    this._laidOut = true;
+
+    for (const field of Array.from(this.children)) {
+      if (typeof field.toDescriptor !== 'function') continue;
+      const descriptor = descriptorFromElement(field, 'field');
+      // `label` (incl. an explicit empty string, which suppresses it) wins; else humanize source.
+      const labelText =
+        descriptor.label != null ? descriptor.label : humanize(descriptor.source || '');
+
+      const row = document.createElement('div');
+      row.className = 'sa-show__field';
+      row.setAttribute('data-sa-part', 'field');
+      if (labelText) {
+        const label = document.createElement('span');
+        label.className = 'sa-show__label';
+        label.textContent = labelText;
+        row.appendChild(label);
+      }
+      const value = document.createElement('div');
+      value.className = 'sa-show__value';
+      this.insertBefore(row, field);
+      value.appendChild(field); // moves the field under the row; still resolves up to <sa-show>
+      row.appendChild(value);
+    }
   }
 }
 

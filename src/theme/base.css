@@ -159,6 +159,14 @@ table.sa-datagrid,
   color: var(--sa-foreground, var(--foreground, #09090b));
 }
 
+/* Body rows are <sa-datagrid-row> CUSTOM ELEMENTS, not <tr>. A custom element defaults to
+   `display: inline`, which collapses every row's cells onto one line (the browser's anonymous
+   table-box fixup wraps all consecutive inline rows into a SINGLE anonymous row) — so the row must
+   be told to lay out as a table row explicitly. The header row is a real <tr> and already does. */
+.sa-datagrid__row {
+  display: table-row;
+}
+
 .sa-datagrid__row,
 .sa-datagrid tbody tr {
   border-bottom: 1px solid var(--sa-border, var(--border, #e5e7eb));
@@ -193,6 +201,36 @@ table.sa-datagrid,
   background: var(--sa-secondary, var(--secondary, #f4f4f5));
   color: var(--sa-secondary-foreground, var(--secondary-foreground, #18181b));
   font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* Show layout: a vertical stack of labeled field rows (see SaSimpleShowLayout). */
+.sa-simple-show-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-show__field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--sa-spacing) * 1);
+  padding: calc(var(--sa-spacing) * 3) 0;
+  border-bottom: 1px solid var(--sa-border, var(--border, #e5e7eb));
+}
+
+.sa-show__field:last-child {
+  border-bottom: none;
+}
+
+.sa-show__label {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--sa-muted-foreground, var(--muted-foreground, #71717a));
+}
+
+.sa-show__value {
+  color: var(--sa-foreground, var(--foreground, #09090b));
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -250,10 +288,10 @@ table.sa-datagrid,
   color: var(--sa-foreground, var(--foreground, #09090b));
 }
 
-.sa-input input,
+.sa-input input:not([type='checkbox']):not([type='radio']),
 .sa-input select,
 .sa-input textarea,
-[class$='-input'] input,
+[class$='-input'] input:not([type='checkbox']):not([type='radio']),
 [class$='-input'] select,
 [class$='-input'] textarea,
 [class*='sa-'] input:not([type='checkbox']):not([type='radio']),
