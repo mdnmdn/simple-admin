@@ -318,10 +318,18 @@ export class SaAdmin extends HTMLElement {
     }
 
     if (this._authProvider) {
-      const ok = VIEW_ACTIONS.has(route.view)
-        ? await guardView(this._authProvider, { action: route.view, resource: route.resource })
-        : await checkAuth(this._authProvider);
-      if (!ok) return; // guardView/checkAuth already navigated on failure
+      // Admin-wide require-auth gates every route; a resource can also opt in on its own
+      // (`<sa-resource require-auth>` / `{ requireAuth: true }`) so it's login-gated even while
+      // the admin default stays false — the rest of the app stays public.
+      const resourceDescriptor = route.resource ? getResource(route.resource) : null;
+      const routeRequiresAuth =
+        this._requireAuth || !!(resourceDescriptor && resourceDescriptor.requireAuth);
+      if (routeRequiresAuth) {
+        const ok = VIEW_ACTIONS.has(route.view)
+          ? await guardView(this._authProvider, { action: route.view, resource: route.resource })
+          : await checkAuth(this._authProvider);
+        if (!ok) return; // guardView/checkAuth already navigated on failure
+      }
     }
 
     this._renderShell();

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>simple-admin — theme-switcher example</title>
+  <title>simple-admin — kitchen-sink example</title>
   <!-- Inline favicon so the browser doesn't request /favicon.ico (a guaranteed console 404
        when serving the repo root with a bare static file server). -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🎨</text></svg>" />
@@ -28,18 +28,21 @@
   </div>
 
   <!--
-    No require-auth here on purpose: this is a THEMING demo, not an auth demo (see
-    examples/html-only, examples/js-config and examples/mixed for auth). Dropping straight into
-    the resource list lets a visitor see the themes reskin real content immediately.
+    No admin-wide require-auth here on purpose: most of this admin (Ecommerce, Settings) is meant
+    to be reachable by an anonymous visitor, same as the original theming-only demo this grew out
+    of. Only the "Private" section (audit-log, registered in resources/audit-log.js) opts itself
+    into auth via its own `require-auth` — see app.js and doc 02-resources-and-views.md §8.
   -->
   <sa-admin id="admin" title="Kitchen Sink Admin">
     <!-- ============================================================================
-         products — the "kitchen sink" resource. Its list/create/edit exercise every
-         field and input type in the catalog (_docs/manual/03-fields-and-inputs-reference.md)
-         so the three themes are visible across every kind of control, not just text/email/
-         boolean/date/reference like the other examples' posts/authors resources.
+         products — the "kitchen sink" resource. Its list/create/edit exercise every field and
+         input type in the catalog (_docs/manual/03-fields-and-inputs-reference.md), including the
+         one (sa-array-input/sa-form-iterator, in the "Variants" tab below) that JS config can't
+         express yet — see app.js's top comment for why this resource stays HTML markup while
+         categories/tags/authors/posts/audit-log are declared in resources/*.js instead. group is
+         read by renderMenu() to place this resource's link under the "Ecommerce" menu section.
          ============================================================================ -->
-    <sa-resource name="products" record-representation="name">
+    <sa-resource name="products" record-representation="name" group="Ecommerce">
       <sa-list sort-field="name" sort-order="ASC" per-page="10" row-click="edit">
         <sa-filters>
           <sa-search-input source="q" always-on></sa-search-input>
@@ -196,176 +199,8 @@
         </sa-simple-show-layout>
       </sa-show>
     </sa-resource>
-
-    <!-- ============================================================================
-         categories / tags — minimal resources, declared so products' reference and
-         reference-array attributes resolve without a "points to resource which is not
-         declared" diagnostic. Still fully functional list views, not just stubs.
-         ============================================================================ -->
-    <sa-resource name="categories" record-representation="name">
-      <sa-list sort-field="name" sort-order="ASC" per-page="10">
-        <sa-datagrid>
-          <sa-text-field source="id"></sa-text-field>
-          <sa-text-field source="name" sortable></sa-text-field>
-        </sa-datagrid>
-      </sa-list>
-    </sa-resource>
-
-    <sa-resource name="tags" record-representation="name">
-      <sa-list sort-field="name" sort-order="ASC" per-page="10">
-        <sa-datagrid>
-          <sa-text-field source="id"></sa-text-field>
-          <sa-text-field source="name" sortable></sa-text-field>
-        </sa-datagrid>
-      </sa-list>
-    </sa-resource>
-
-    <!-- ============================================================================
-         authors / posts — kept from the original theme-switcher demo: still a useful,
-         already-working exercise of text/email/boolean/date/reference.
-         ============================================================================ -->
-    <sa-resource name="authors" record-representation="name">
-      <sa-list sort-field="name" sort-order="ASC" per-page="10" row-click="edit">
-        <sa-datagrid>
-          <sa-text-field source="id"></sa-text-field>
-          <sa-text-field source="name" sortable></sa-text-field>
-          <sa-email-field source="email"></sa-email-field>
-        </sa-datagrid>
-      </sa-list>
-
-      <sa-create redirect="list">
-        <sa-simple-form>
-          <sa-text-input source="name" validate="required"></sa-text-input>
-          <sa-email-input source="email" validate="required|email"></sa-email-input>
-        </sa-simple-form>
-      </sa-create>
-
-      <sa-edit redirect="list">
-        <sa-simple-form>
-          <sa-text-input source="name" validate="required"></sa-text-input>
-          <sa-email-input source="email" validate="required|email"></sa-email-input>
-        </sa-simple-form>
-      </sa-edit>
-
-      <sa-show>
-        <sa-simple-show-layout>
-          <sa-text-field source="name"></sa-text-field>
-          <sa-email-field source="email"></sa-email-field>
-        </sa-simple-show-layout>
-      </sa-show>
-    </sa-resource>
-
-    <sa-resource name="posts" record-representation="title">
-      <sa-list sort-field="published_at" sort-order="DESC" per-page="10" row-click="edit">
-        <sa-filters>
-          <sa-search-input source="q" always-on></sa-search-input>
-          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
-        </sa-filters>
-        <sa-datagrid>
-          <sa-text-field source="id"></sa-text-field>
-          <sa-text-field source="title" label="Title" sortable></sa-text-field>
-          <sa-reference-field source="author_id" reference="authors" link="show">
-            <sa-text-field source="name"></sa-text-field>
-          </sa-reference-field>
-          <sa-boolean-field source="is_published" label="Published"></sa-boolean-field>
-          <sa-date-field source="published_at" sortable></sa-date-field>
-        </sa-datagrid>
-        <sa-bulk-delete-button></sa-bulk-delete-button>
-      </sa-list>
-
-      <sa-create redirect="list">
-        <sa-simple-form>
-          <sa-text-input source="title" validate="required|minLength:3"></sa-text-input>
-          <sa-text-input source="body" multiline></sa-text-input>
-          <sa-reference-input source="author_id" reference="authors">
-            <sa-select-input option-text="name"></sa-select-input>
-          </sa-reference-input>
-          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
-          <sa-date-input source="published_at" validate="required"></sa-date-input>
-        </sa-simple-form>
-      </sa-create>
-
-      <sa-edit redirect="list">
-        <sa-simple-form>
-          <sa-text-input source="title" validate="required|minLength:3"></sa-text-input>
-          <sa-text-input source="body" multiline></sa-text-input>
-          <sa-reference-input source="author_id" reference="authors">
-            <sa-select-input option-text="name"></sa-select-input>
-          </sa-reference-input>
-          <sa-boolean-input source="is_published" label="Published"></sa-boolean-input>
-          <sa-date-input source="published_at" validate="required"></sa-date-input>
-        </sa-simple-form>
-      </sa-edit>
-
-      <sa-show>
-        <sa-simple-show-layout>
-          <sa-text-field source="title"></sa-text-field>
-          <sa-text-field source="body"></sa-text-field>
-          <sa-reference-field source="author_id" reference="authors" link="edit">
-            <sa-text-field source="name"></sa-text-field>
-          </sa-reference-field>
-          <sa-boolean-field source="is_published" label="Published"></sa-boolean-field>
-          <sa-date-field source="published_at"></sa-date-field>
-        </sa-simple-show-layout>
-      </sa-show>
-    </sa-resource>
   </sa-admin>
 
-  <script type="module">
-    import { navigate } from '../../src/index.js';
-    import { createKitchenSinkDataProvider } from './kitchen-sink-data.js';
-
-    const admin = document.getElementById('admin');
-    // No authProvider here: this example intentionally has no login (see the html-only,
-    // js-config and mixed examples for auth). It boots straight into the products list.
-    admin.dataProvider = createKitchenSinkDataProvider();
-
-    // With no hash in the URL, the router's default route is the bare "dashboard" placeholder
-    // (a "Welcome to ..." panel — see core/router.js's `path === '' -> {view:'dashboard'}`), not
-    // any real resource. That's a weak first impression for a demo whose whole point is showing
-    // real content, so jump straight to the kitchen-sink resource on a fresh load.
-    if (!location.hash) navigate('#/products');
-
-    // sa-function-field's render callback is JS-only (functions aren't serializable into HTML
-    // attributes — see 03-fields-and-inputs-reference.md §3.3 "sa-function-field"), so the two
-    // markup placeholders above (`data-role="stock-status-field"`) get their `.render` wired up
-    // here, right after upgrade. This works regardless of when data actually loads: the render
-    // callback is only invoked later, per-row, once a record is available.
-    document.querySelectorAll('[data-role="stock-status-field"]').forEach((el) => {
-      el.render = (record) => (record.in_stock ? '✅ In stock' : '⛔ Out of stock');
-    });
-
-    // --- Theme switcher wiring -------------------------------------------------------------
-    // Exactly the pattern from _docs/manual/07-personalizing-controls.md §4: switching themes
-    // at runtime is a single attribute write on <html>. No stylesheet swap, no component
-    // re-render — every --sa-* custom property below the matching [data-theme="..."] selector
-    // in themes.css just starts resolving to different values.
-    function setTheme(name) {
-      document.documentElement.dataset.theme = name;
-      localStorage.setItem('theme', name); // optional: remember the choice
-    }
-
-    const switcher = document.getElementById('theme-switcher');
-    const buttons = switcher.querySelectorAll('[data-theme-choice]');
-
-    function highlightActive(name) {
-      buttons.forEach((btn) => {
-        btn.classList.toggle('theme-switcher__btn--active', btn.dataset.themeChoice === name);
-      });
-    }
-
-    switcher.addEventListener('click', (event) => {
-      const btn = event.target.closest('[data-theme-choice]');
-      if (!btn) return;
-      const name = btn.dataset.themeChoice;
-      setTheme(name);
-      highlightActive(name);
-    });
-
-    // Restore the previously chosen theme on load (falls back to 'light').
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
-    highlightActive(savedTheme);
-  </script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

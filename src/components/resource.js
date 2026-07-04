@@ -18,7 +18,7 @@ const VIEWS = ['list', 'create', 'edit', 'show'];
 
 export class SaResource extends HTMLElement {
   static get observedAttributes() {
-    return ['name', 'icon', 'record-representation'];
+    return ['name', 'icon', 'record-representation', 'group', 'require-auth'];
   }
 
   constructor() {
@@ -67,6 +67,12 @@ export class SaResource extends HTMLElement {
       name: this.getAttribute('name'),
       icon: this.getAttribute('icon') || undefined,
       recordRepresentation: this.getAttribute('record-representation') || undefined,
+      // `group` buckets this resource under a menu section header (renderMenu(), layout.js).
+      // Resources with no group render flat, above any grouped sections (back-compat default).
+      group: this.getAttribute('group') || undefined,
+      // Per-resource override: gate this resource's routes even when <sa-admin> itself has
+      // require-auth="false" (see SaAdmin._handleRoute in components/admin.js).
+      requireAuth: this.hasAttribute('require-auth'),
     };
     for (const view of VIEWS) {
       const el = this.querySelector(`:scope > sa-${view}`);

@@ -43,6 +43,12 @@ export const renderAppBar = ({ title, identity, onLogout }) => {
 
 // Menu: one link per registered resource that declares a list view (doc 10 §5.2 — resources
 // with no list view get no menu entry, per diagnostics 'resource-no-views').
+//
+// Resources may opt into a menu section via `group` (`<sa-resource group="...">` /
+// `{ group: '...' }`, doc 02 §2). Ungrouped resources render first as a flat list (unchanged
+// from before `group` existed), followed by one header + link list per group, in first-seen
+// registration order — there is no separate sort step, so import/declaration order *is* menu
+// order.
 export const renderMenu = () => {
   const nav = document.createElement('nav');
   nav.className = 'sa-menu';
@@ -50,8 +56,7 @@ export const renderMenu = () => {
 
   const active = currentRoute.peek();
 
-  for (const resource of getAllResources()) {
-    if (!resource.list) continue;
+  const appendLink = (resource) => {
     const link = document.createElement('a');
     link.className = 'sa-menu-item';
     link.setAttribute('data-sa-part', 'menu-item');
@@ -61,6 +66,30 @@ export const renderMenu = () => {
     link.href = `#/${resource.name}`;
     link.textContent = resource.name;
     nav.appendChild(link);
+  };
+
+  const ungrouped = [];
+  const groups = new Map(); // group label -> resource[], in first-seen order
+
+  for (const resource of getAllResources()) {
+    if (!resource.list) continue;
+    if (resource.group) {
+      if (!groups.has(resource.group)) groups.set(resource.group, []);
+      groups.get(resource.group).push(resource);
+    } else {
+      ungrouped.push(resource);
+    }
+  }
+
+  for (const resource of ungrouped) appendLink(resource);
+
+  for (const [label, resourcesInGroup] of groups) {
+    const heading = document.createElement('div');
+    heading.className = 'sa-menu-group-label';
+    heading.setAttribute('data-sa-part', 'menu-group-label');
+    heading.textContent = label;
+    nav.appendChild(heading);
+    for (const resource of resourcesInGroup) appendLink(resource);
   }
 
   return nav;

@@ -39,7 +39,7 @@ _docs/
   verification-plan.md  what's been verified statically/in jsdom, and the real-browser bugs
                found and fixed so far — read this before assuming something works
 
-examples/      four runnable demo apps: html-only, js-config, mixed, dist-bundle, theme-switcher
+examples/      five runnable demo apps: html-only, js-config, mixed, dist-bundle, kitchen-sink
 scripts/
   build.mjs           esbuild bundling for dist/
   verify-jsdom.mjs     jsdom-based functional smoke test (registration, routing, forms, data)

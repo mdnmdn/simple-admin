@@ -13,7 +13,7 @@ Every example below is shown in both authoring syntaxes side by side. Both compi
 | `dataProvider` | property only | — | Required. Functions can't be expressed as HTML attributes, so this is always set via JS, even in the "HTML-only" syntax. |
 | `authProvider` | property only | — | Optional. If set, `require-auth`/`requireAuth` guards views and `<sa-login>` is wired up automatically. |
 | `title` / `title` attribute | string | `'Admin'` | Shown in the app bar, and used as the dashboard's welcome text (`#/`). |
-| `require-auth` (attribute) / `requireAuth` (property) | boolean | `false` | When true, every list/create/edit/show route runs `guardView()` before mounting (see [§8](#8-auth)). |
+| `require-auth` (attribute) / `requireAuth` (property) | boolean | `false` | When true, every list/create/edit/show route runs `guardView()` before mounting (see [§8](#8-auth)). A resource can also opt itself in individually via `<sa-resource require-auth>` (§2) without turning this on admin-wide — the two combine with OR. |
 
 Because `dataProvider`/`authProvider` are functions/objects, not strings, you always set them via JS — via properties on the element (HTML-authoring path) or via the config object passed to `SimpleAdmin.admin({...})` (JS-config path). Both routes end up calling the exact same property setters on the same `SaAdmin` instance.
 
@@ -67,6 +67,8 @@ A resource is a name plus up to four views: `list`, `create`, `edit`, `show`. `<
 | `name` | Required. Used in routes (`#/posts`), the menu, and as the resource key passed to every `dataProvider` call. |
 | `icon` | Optional; free-form value read by the menu renderer. |
 | `record-representation` / `recordRepresentation` | How a single record of this resource is rendered as a short label (e.g. inside a `sa-reference-field`/`sa-reference-input`). Typically a source name (e.g. `"name"`, `"title"`). |
+| `group` | Optional. Buckets this resource under a labeled section in the side menu (`renderMenu()`, `components/layout.js`). Resources with no `group` render as a flat list above any grouped sections; grouped sections render in first-seen registration order. Purely a menu-presentation concern — it has no effect on routing. |
+| `require-auth` (attribute) / `requireAuth` (property) | Boolean, default `false`. Optional per-resource override: gates this resource's list/create/edit/show routes through `guardView()` even when `<sa-admin>` itself has `require-auth="false"` — the rest of the app stays public while this resource still redirects to `#/login` when unauthenticated. See [§8](#8-auth). |
 
 If none of `list`/`create`/`edit`/`show` is present, a `resource-no-views` diagnostic warning is logged — a resource with no views can never be routed to.
 
@@ -337,7 +339,7 @@ edit: {
 ## 8. Auth
 
 - **`<sa-login>`** — a plain username/password form. It reads the active `authProvider` from the registry (no prop needed) and calls `authProvider.login({ username, password })`. On success it navigates to `result.redirectTo` (default `#/`, or stays put if `redirectTo === false`); on failure it shows the thrown error's `message` inline. `<sa-admin>` mounts it standalone (app bar/menu hidden) whenever the current route is `#/login`.
-- **`require-auth` / `requireAuth: true`** — when set, every list/create/edit/show route runs `guardView(authProvider, { action, resource })` before mounting: first `checkAuth()`, then `canAccess()`. A failed `checkAuth()` logs the user out (if `authProvider.logout` exists) and redirects to `#/login` (or wherever the thrown error's `redirectTo` says). A failed `canAccess()` redirects to `#/access-denied` instead — the view simply never mounts.
+- **`require-auth` / `requireAuth: true`** — when set on `<sa-admin>`, every list/create/edit/show route runs `guardView(authProvider, { action, resource })` before mounting: first `checkAuth()`, then `canAccess()`. A failed `checkAuth()` logs the user out (if `authProvider.logout` exists) and redirects to `#/login` (or wherever the thrown error's `redirectTo` says). A failed `canAccess()` redirects to `#/access-denied` instead — the view simply never mounts. A route is guarded whenever *either* `<sa-admin require-auth>` is set *or* the route's resource itself declares `<sa-resource require-auth>` — so you can leave the admin-wide default off and mark only specific resources as login-gated, keeping the rest of the app public with the same `authProvider` (`components/admin.js`'s `_handleRoute`). This only runs at all when an `authProvider` is present; with no `authProvider`, nothing is ever gated regardless of `require-auth`.
 - **`<sa-can-access action="..." resource="...">`** — wraps arbitrary light-DOM content (e.g. a button) and hides it (`display: none`) when `canAccess({ action, resource })` resolves false. This check runs once on connect; it does not react to identity changes later.
 
 ```html

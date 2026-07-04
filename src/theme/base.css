@@ -105,6 +105,20 @@
   font-weight: 600;
 }
 
+.sa-menu-group-label {
+  margin-top: calc(var(--sa-spacing) * 3);
+  padding: calc(var(--sa-spacing) * 2) calc(var(--sa-spacing) * 3) calc(var(--sa-spacing) * 1);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sa-muted-foreground, var(--muted-foreground, #71717a));
+}
+
+.sa-menu-group-label:first-child {
+  margin-top: 0;
+}
+
 .sa-content,
 [data-sa-part='content'] {
   grid-area: content;

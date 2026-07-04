@@ -1,8 +1,9 @@
-// kitchen-sink-data.js — richer seed data for the theme-switcher example ONLY.
+// data.js — seed data for the kitchen-sink example ONLY.
 //
-// This example's whole point is showing every --sa-* token reskin real content, so it needs a
-// dataset that actually exercises the full field/input catalog (03-fields-and-inputs-reference.md)
-// instead of the posts/authors shape shared by the other three examples.
+// This example's whole point is showing every --sa-* token reskin real content (it started life
+// as the theme-switcher example), so it needs a dataset that actually exercises the full
+// field/input catalog (03-fields-and-inputs-reference.md) instead of the posts/authors shape
+// shared by the other three examples.
 //
 // IMPORTANT: this file does NOT modify examples/mock-data-provider.js — it just imports the
 // generic, seed-agnostic createMockDataProvider factory from there and calls it with a different
@@ -187,12 +188,28 @@ export const PRODUCTS = [
   },
 ];
 
+// Seed for the "Private" menu section (resources/audit-log.js) — the one resource in this
+// example gated by `require-auth`, behind the fake test/test auth provider (auth.js). A read-only
+// security/activity log is the classic case for a section that stays hidden from anonymous
+// visitors while the rest of the admin (Ecommerce, Settings) is public.
+export const AUDIT_LOG = [
+  { id: 1, occurred_at: '2026-06-28T09:12:00', actor: 'test', action: 'login', target: '—', ip_address: '203.0.113.10' },
+  { id: 2, occurred_at: '2026-06-28T09:14:31', actor: 'test', action: 'update', target: 'products#1', ip_address: '203.0.113.10' },
+  { id: 3, occurred_at: '2026-06-29T11:02:47', actor: 'test', action: 'create', target: 'products#9', ip_address: '203.0.113.10' },
+  { id: 4, occurred_at: '2026-06-29T11:05:03', actor: 'test', action: 'delete', target: 'products#9', ip_address: '203.0.113.10' },
+  { id: 5, occurred_at: '2026-06-30T08:47:19', actor: 'test', action: 'update', target: 'categories#3', ip_address: '198.51.100.24' },
+  { id: 6, occurred_at: '2026-07-01T16:30:55', actor: 'test', action: 'login', target: '—', ip_address: '198.51.100.24' },
+  { id: 7, occurred_at: '2026-07-02T13:18:02', actor: 'test', action: 'update', target: 'authors#2', ip_address: '198.51.100.24' },
+  { id: 8, occurred_at: '2026-07-03T10:00:41', actor: 'test', action: 'logout', target: '—', ip_address: '198.51.100.24' },
+];
+
 export const kitchenSinkSeedData = {
   categories: CATEGORIES,
   tags: TAGS,
   authors: AUTHORS,
   posts: POSTS,
   products: PRODUCTS,
+  'audit-log': AUDIT_LOG,
 };
 
 export const createKitchenSinkDataProvider = () => createMockDataProvider(kitchenSinkSeedData);

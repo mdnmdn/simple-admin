@@ -137,11 +137,15 @@ page, everything — with zero JavaScript re-render and zero risk of a flash of 
 
 A complete, runnable version of this pattern — a theme picker switching between three real
 themes live over a kitchen-sink admin exercising the full field/input catalog (`products`,
-plus `categories`/`tags`/`authors`/`posts`) — is in `examples/theme-switcher/`. It has no
-`require-auth`/`authProvider` (unlike `examples/html-only`, `examples/js-config` and
-`examples/mixed`, which cover auth): this example is about theming, so it boots straight into
-content instead of a login screen. Read `examples/theme-switcher/themes.css` for the three full
-token sets and `examples/theme-switcher/index.html` for the switcher UI itself.
+plus `categories`/`tags`/`authors`/`posts`/`audit-log`) — is in `examples/kitchen-sink/`. Most of
+it boots straight into content with no login required, but its "Private" menu section
+(`audit-log`) is gated with `<sa-resource require-auth>` behind a fake `test`/`test` auth
+provider — see [02-resources-and-views.md §8](./02-resources-and-views.md#8-auth) for how a
+single resource opts into auth without turning `require-auth` on for the whole admin. It's also
+split across multiple JS modules (`resources/`, `auth.js`, `theme-switcher.js`) rather than one
+inline `<script>`, showing how a larger JS-config admin can be organized. Read
+`examples/kitchen-sink/themes.css` for the three full token sets and
+`examples/kitchen-sink/theme-switcher.js` for the switcher UI wiring itself.
 
 ## Choosing a level
 

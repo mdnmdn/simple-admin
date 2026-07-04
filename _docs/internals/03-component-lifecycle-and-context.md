@@ -533,8 +533,9 @@ A concrete `#/posts/42` (edit) navigation, naming every handoff in order.
    });
    ```
 2. **Route resolves** to `{ view: 'edit', resource: 'posts', id: '42' }`. `_handleRoute`
-   runs the auth gate (`guardView`) if an authProvider exists, then `_renderShell()` and
-   `_mountView(route)`.
+   runs the auth gate (`guardView`) if an authProvider exists AND the route is actually
+   gated (admin-wide `_requireAuth`, or the target resource's own `requireAuth: true`),
+   then `_renderShell()` and `_mountView(route)`.
 3. **`_mountView`** parks the previous authored view back in `_authoredHost`, clears
    `.sa-content`, looks up `getResource('posts')` from the registry, reads
    `resourceDescriptor.edit`. HTML-authoring path: it is a real `<sa-edit>` element, so

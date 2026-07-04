@@ -1,9 +1,9 @@
 /*
- * themes.css — three runtime-switchable themes for the theme-switcher example (manual doc
+ * themes.css — three runtime-switchable themes for the kitchen-sink example (manual doc
  * `_docs/manual/07-personalizing-controls.md` §4, "Runtime-switchable themes").
  *
  * Gated behind a single `data-theme` attribute on <html>, written by `setTheme(name)` in
- * index.html. Every token here is one of the --sa-* custom properties actually consumed by
+ * theme-switcher.js. Every token here is one of the --sa-* custom properties actually consumed by
  * src/theme/base.css (buttons, datagrid, inputs, appbar, menu, login card, focus ring, radius),
  * so flipping the attribute reskins the whole mounted app with no re-render.
  */
