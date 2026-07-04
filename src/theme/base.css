@@ -159,6 +159,14 @@ table.sa-datagrid,
   color: var(--sa-foreground, var(--foreground, #09090b));
 }
 
+/* Body rows are <sa-datagrid-row> CUSTOM ELEMENTS, not <tr>. A custom element defaults to
+   `display: inline`, which collapses every row's cells onto one line (the browser's anonymous
+   table-box fixup wraps all consecutive inline rows into a SINGLE anonymous row) — so the row must
+   be told to lay out as a table row explicitly. The header row is a real <tr> and already does. */
+.sa-datagrid__row {
+  display: table-row;
+}
+
 .sa-datagrid__row,
 .sa-datagrid tbody tr {
   border-bottom: 1px solid var(--sa-border, var(--border, #e5e7eb));
