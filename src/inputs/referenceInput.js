@@ -95,7 +95,14 @@ export class SaReferenceInput extends BaseInput(HTMLElement) {
     this._fallback = false;
     this._child._descriptor.optionValue = 'id'; // forced per doc 06 §5 when nested in a reference input
     this._child._descriptor.translateChoice = false;
-    wrap.appendChild(this._child); // connects it -> patched connectedCallback -> child.renderControl()
+    wrap.appendChild(this._child);
+    // Build the delegate's control explicitly. patchChildAsDelegate() overrides the child's
+    // connectedCallback with an INSTANCE own property, but a real browser dispatches custom-element
+    // lifecycle reactions from the PROTOTYPE method captured at define() time — so on append the
+    // browser runs BaseInput.connectedCallback (which no-ops for a sourceless delegate), NOT the
+    // patched override, and the control would otherwise never render. (jsdom resolves the callback
+    // dynamically, which is why this only broke in a real browser.)
+    this._child.renderControl();
 
     // Best-effort immediate display (raw id) while choices/hydration are in flight.
     this.updateControl(this.format(this._form.getField(this.source)));

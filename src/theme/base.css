@@ -258,10 +258,10 @@ table.sa-datagrid,
   color: var(--sa-foreground, var(--foreground, #09090b));
 }
 
-.sa-input input,
+.sa-input input:not([type='checkbox']):not([type='radio']),
 .sa-input select,
 .sa-input textarea,
-[class$='-input'] input,
+[class$='-input'] input:not([type='checkbox']):not([type='radio']),
 [class$='-input'] select,
 [class$='-input'] textarea,
 [class*='sa-'] input:not([type='checkbox']):not([type='radio']),
