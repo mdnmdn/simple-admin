@@ -13,6 +13,17 @@ import { absorbAttributes, applyAttribute } from '../core/descriptor.js';
 import { contextLabel } from '../core/context.js';
 import * as diagnostics from '../core/diagnostics.js';
 
+// See baseField.js for the full rationale: restores a `.descriptor` assigned before upgrade (as
+// happens to inputs cloned inside inert <template> content) so JS-config descriptors survive
+// cloning. No-op for HTML-authored inputs.
+const upgradeProperty = (el, prop) => {
+  if (Object.prototype.hasOwnProperty.call(el, prop)) {
+    const value = el[prop];
+    delete el[prop];
+    el[prop] = value;
+  }
+};
+
 export const BaseInput = (Base = HTMLElement) =>
   class extends Base {
     static get observedAttributes() {
@@ -83,6 +94,7 @@ export const BaseInput = (Base = HTMLElement) =>
     }
 
     connectedCallback() {
+      upgradeProperty(this, 'descriptor');
       if (this.isConnected) this._absorbAttributes();
 
       if (!this.source) {
@@ -121,9 +133,34 @@ export const BaseInput = (Base = HTMLElement) =>
       const host = this.closest('sa-simple-form, sa-tabbed-form, sa-filters');
       this._form = host ? host.formStore : null;
       if (!this._form) {
-        diagnostics.warn('input-no-form', { tag: this.localName, source: this.source });
+        // Upgrade-order grace (same race as the sourceless case above): at initial page upgrade
+        // this input can connect before its form host has been upgraded and built its FormStore.
+        // Retry once on the next microtask; only warn if it is STILL connected with no store —
+        // i.e. genuinely authored outside any form.
+        if (!this._retriedFormLookup) {
+          this._retriedFormLookup = true;
+          queueMicrotask(() => {
+            if (!this.isConnected || this._form || this._dispose) return;
+            this.connectedCallback();
+          });
+          return;
+        }
+        // Only warn when there is genuinely NO form host in the ancestry — that's the "move it
+        // inside a form" mistake the message describes. If a host element EXISTS but hasn't
+        // published its formStore yet (upgrade order, or a parked/hidden template view — same
+        // rule as baseField's no-record-context case), the input isn't misplaced; it re-binds
+        // when the host wires up on its own connect/reconnect.
+        const viewHost = this.closest('sa-list, sa-create, sa-edit, sa-show');
+        const isParkedTemplate =
+          host ||
+          this.closest('[data-sa-part="authored-resources"]') ||
+          (viewHost && viewHost.style.display === 'none');
+        if (!isParkedTemplate) {
+          diagnostics.warn('input-no-form', { tag: this.localName, source: this.source });
+        }
         return;
       }
+      this._retriedFormLookup = false;
 
       // Register this source with the form: seed defaultValue, validators, parse/format.
       this._form.register(this.source, {
@@ -168,6 +205,7 @@ export const BaseInput = (Base = HTMLElement) =>
       }
       this._form = null;
       this._dispose = null;
+      this._retriedFormLookup = false; // fresh one-microtask grace on the next connect
     }
 
     // ---- seams a concrete input implements/overrides ----

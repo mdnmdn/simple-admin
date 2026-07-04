@@ -5,6 +5,11 @@
 import { BaseField } from './baseField.js';
 import { registerField, hasResource, getDataProvider } from '../core/registry.js';
 import { createGetManyBatcher } from '../providers/batcher.js';
+import {
+  captureChildTemplates,
+  buildChildTemplates,
+  hasChildTemplates,
+} from './templateChildren.js';
 import * as diagnostics from '../core/diagnostics.js';
 
 // One shared batcher per reference resource name, created lazily against the active
@@ -30,7 +35,6 @@ export class SaReferenceField extends BaseField(HTMLElement) {
 
   constructor() {
     super();
-    this._templateChildren = null; // captured once, on first connect
     this._fetchToken = 0;
   }
 
@@ -44,12 +48,11 @@ export class SaReferenceField extends BaseField(HTMLElement) {
   }
 
   connectedCallback() {
-    // Snapshot the light-DOM child field(s) supplied as the "how to render the related record"
-    // template BEFORE any render pass has a chance to clear this element's content.
-    if (!this._templateChildren) {
-      this._templateChildren = [...this.children];
-      for (const child of this._templateChildren) child.remove();
-    }
+    // Snapshot the light-DOM child field(s) — the "how to render the related record" template —
+    // into `_descriptor.children` BEFORE any render pass clears this element's content, so the
+    // template rides along with `_descriptor` through <sa-datagrid>'s per-row clone. See
+    // templateChildren.js.
+    captureChildTemplates(this);
     super.connectedCallback();
   }
 
@@ -104,9 +107,9 @@ export class SaReferenceField extends BaseField(HTMLElement) {
     this.__recordContext = { record: related };
     this.textContent = '';
     let content;
-    if (this._templateChildren.length) {
+    if (hasChildTemplates(this)) {
       content = document.createDocumentFragment();
-      for (const child of this._templateChildren) content.appendChild(child);
+      for (const child of buildChildTemplates(this)) content.appendChild(child);
     } else {
       content = document.createTextNode(String(related.id));
     }

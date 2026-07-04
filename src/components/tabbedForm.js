@@ -71,10 +71,21 @@ export class SaTabbedForm extends HTMLElement {
 
     this._descriptor = descriptorFromElement(this, 'view');
 
-    this.formStore = createFormController(this._descriptor, {
-      dataProvider: getDataProvider(),
-      record: this._record || {},
-    });
+    // ONE FormStore per element, created lazily and kept across reconnects (same staleness
+    // rationale as <sa-filters>'s stable store): custom-element reaction batches during boot can
+    // interleave so a child input's last (re)connect — which caches `this._form` and registers
+    // its validators — lands between two of THIS element's reconnects. A fresh store per connect
+    // would strand those inputs on the previous store: their edits and registered validators
+    // would be invisible to save()/validateAll(). Per-mount record state is handled by the
+    // `record` setter calling formStore.reset(), not by rebuilding the store.
+    if (!this.formStore) {
+      this.formStore = createFormController(this._descriptor, {
+        dataProvider: getDataProvider(),
+        record: this._record || {},
+      });
+    } else {
+      this.formStore.reset(this._record || {});
+    }
     this.__formContext = { formStore: this.formStore, resource: this._resource };
 
     this._warnMixedValidation();

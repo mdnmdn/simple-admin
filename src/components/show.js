@@ -14,13 +14,22 @@ import * as diagnostics from '../core/diagnostics.js';
 
 export class SaShow extends HTMLElement {
   connectedCallback() {
-    if (this._built) return;
-    this._built = true;
     this.classList.add('sa-show');
 
-    // Detach every child before it gets a chance to connect with no record context yet.
-    this._pending = Array.from(this.childNodes);
-    for (const node of this._pending) node.remove();
+    // Capture the light-DOM field template(s) ONCE and hold them on the instance — they must
+    // survive a disconnect+reconnect, which legitimately happens when <sa-admin>'s dataProvider is
+    // set after this view already connected (_reconnectAuthoredViews in admin.js) and every time
+    // the resource host is moved into/out of .sa-content on navigation. Re-reading childNodes on
+    // each connect (the old behavior) lost them: the first connect detaches them, so a later
+    // reconnect would capture an empty set and render a permanently blank view — the concrete
+    // symptom was a deep-linked/refreshed <sa-show> stuck on "Loading…". This mirrors how
+    // <sa-datagrid>/<sa-list> keep their persistent build state across reconnects.
+    if (!this._fieldTemplates) {
+      this._fieldTemplates = Array.from(this.childNodes);
+    }
+    // Detach current content each connect so fields never connect without a record context, and so
+    // a re-append on (re)load re-runs their connectedCallback against the freshly fetched record.
+    for (const node of Array.from(this.childNodes)) node.remove();
 
     this._resource = this.getAttribute('resource') || this._resolveResource();
     const attrId = this.getAttribute('id');
@@ -37,10 +46,6 @@ export class SaShow extends HTMLElement {
     this.appendChild(this._status);
 
     this._load();
-  }
-
-  disconnectedCallback() {
-    this._built = false;
   }
 
   get record() {
@@ -62,6 +67,17 @@ export class SaShow extends HTMLElement {
 
     const dataProvider = getDataProvider();
     if (!dataProvider || typeof dataProvider.getOne !== 'function') {
+      // Boot race: a deep-linked <sa-show> can connect and load before `admin.dataProvider = ...`
+      // runs (a few lines after the import that upgraded the tree). Retry once on the next
+      // microtask — the module script has finished by then — before diagnosing. Same grace as the
+      // list controller (core/store.js).
+      if (!this._providerRetry) {
+        this._providerRetry = true;
+        queueMicrotask(() => {
+          if (this.isConnected && this._id != null && !this.__recordContext) this._load();
+        });
+        return;
+      }
       diagnostics.error('provider-method-missing', {
         method: 'getOne',
         resource: this._resource,
@@ -70,6 +86,7 @@ export class SaShow extends HTMLElement {
       this._status.textContent = 'Unable to load: no dataProvider.getOne.';
       return;
     }
+    this._providerRetry = false;
 
     this._status.textContent = 'Loading…';
     try {
@@ -78,7 +95,7 @@ export class SaShow extends HTMLElement {
       // Publish before re-appending children, so their connectedCallback resolves it.
       this.__recordContext = { record: result.data };
       this._status.remove();
-      for (const node of this._pending) this.appendChild(node);
+      for (const node of this._fieldTemplates) this.appendChild(node);
     } catch (err) {
       if (!this.isConnected) return;
       this._status.textContent = `Error: ${err && err.message ? err.message : err}`;

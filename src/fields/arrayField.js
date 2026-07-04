@@ -4,18 +4,16 @@
 // Per react-admin, "empty" is just an empty list — `emptyText` is not applied here.
 import { BaseField } from './baseField.js';
 import { registerField } from '../core/registry.js';
+import {
+  captureChildTemplates,
+  buildChildTemplates,
+} from './templateChildren.js';
 
 export class SaArrayField extends BaseField(HTMLElement) {
-  constructor() {
-    super();
-    this._templateChildren = null; // captured once, on first connect
-  }
-
   connectedCallback() {
-    if (!this._templateChildren) {
-      this._templateChildren = [...this.children];
-      for (const child of this._templateChildren) child.remove();
-    }
+    // Snapshot child templates into `_descriptor.children` so they survive <sa-datagrid>'s per-row
+    // clone — see templateChildren.js.
+    captureChildTemplates(this);
     super.connectedCallback();
   }
 
@@ -28,7 +26,7 @@ export class SaArrayField extends BaseField(HTMLElement) {
       const row = document.createElement('sa-array-field-row');
       row.className = 'sa-field__row';
       row.__recordContext = { record: item };
-      for (const child of this._templateChildren) row.appendChild(child.cloneNode(true));
+      for (const child of buildChildTemplates(this)) row.appendChild(child);
       this.appendChild(row);
     }
   }

@@ -20,7 +20,7 @@
 //   elements are parked back in a hidden host so they stay registered; JS-config elements are
 //   simply discarded and recreated next visit).
 
-import { effect } from '../core/signal.js';
+import { effect, untracked } from '../core/signal.js';
 import { currentRoute, navigate, startRouter } from '../core/router.js';
 import {
   setDataProvider,
@@ -227,7 +227,15 @@ export class SaAdmin extends HTMLElement {
 
   _publishProviders() {
     if (!this._dataProvider) {
-      diagnostics.error('no-data-provider', {});
+      // Grace period: the standard HTML-authoring pattern assigns `.dataProvider` a few lines
+      // after the `import` that upgraded this element, inside the same module script — so at
+      // first connect the provider is legitimately not there YET (see the setter comment above).
+      // Defer the diagnostic one microtask (module scripts finish before microtasks run) so that
+      // supported pattern doesn't log a spurious error; a genuinely missing provider still gets
+      // reported.
+      queueMicrotask(() => {
+        if (!this._dataProvider) diagnostics.error('no-data-provider', {});
+      });
     }
     if (this._requireAuth && !this._authProvider) {
       diagnostics.warn('no-auth-provider', {});
@@ -277,7 +285,12 @@ export class SaAdmin extends HTMLElement {
     startRouter();
     this._dispose = effect(() => {
       const route = currentRoute.get();
-      this._handleRoute(route);
+      // The route effect must depend on the route and NOTHING else. Mounting a view runs
+      // arbitrary component setup (connectedCallbacks, renderControl, form seeding) that both
+      // reads and writes other signals; if those reads subscribed this effect, the writes would
+      // re-run it — an infinite remount loop (page freeze on every list->edit transition of a
+      // resource whose form has reference/array inputs). See untracked() in core/signal.js.
+      untracked(() => this._handleRoute(route));
     });
     this._booted = true;
   }

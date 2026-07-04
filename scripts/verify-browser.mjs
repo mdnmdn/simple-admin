@@ -38,23 +38,28 @@ async function verifyExample(browser, name) {
     await page.waitForTimeout(1000);
     await shot('01-initial');
 
-    // Login (require-auth is set on every example).
-    const userInput = page.locator('input[name="username"], input[type="text"]').first();
+    // Login (require-auth is set on every example). Scope to the visible <sa-login> form: the
+    // page also contains parked resource-view templates (create/edit forms) whose text inputs are
+    // present but display:none, so an unscoped `input[type="text"]` first-match would grab a hidden
+    // one and hang.
+    const userInput = page.locator('sa-login input[name="username"], sa-login input[type="text"] >> visible=true').first();
     if (await userInput.count()) {
       await userInput.fill('admin');
-      await page.locator('input[type="password"]').first().fill('admin');
-      await page.locator('button[type="submit"], button:has-text("Log")').first().click();
+      await page.locator('sa-login input[type="password"] >> visible=true').first().fill('admin');
+      await page.locator('sa-login button >> visible=true').first().click();
       await page.waitForTimeout(800);
       await shot('02-after-login');
     }
 
-    await page.waitForSelector('sa-datagrid', { timeout: 5000 }).catch(() => {});
+    // All view assertions below scope to `.sa-content` (the mounted view) and visible elements —
+    // parked resources keep their own datagrid/rows/buttons connected but hidden.
+    await page.waitForSelector('.sa-content sa-datagrid', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(1500); // initial getList + reference batching
     await shot('03-list');
-    report.rowCount = await page.locator('sa-datagrid-row').count();
+    report.rowCount = await page.locator('.sa-content sa-datagrid-row >> visible=true').count();
 
     // Sort
-    const header = page.locator('sa-datagrid th').first();
+    const header = page.locator('.sa-content sa-datagrid th >> visible=true').first();
     if (await header.count()) {
       await header.click();
       await page.waitForTimeout(600);
@@ -62,33 +67,40 @@ async function verifyExample(browser, name) {
     }
 
     // Filter (posts resource has a search filter in every example)
-    const search = page.locator('sa-search-input input, input[type="search"]').first();
+    const search = page.locator('.sa-content sa-search-input input >> visible=true').first();
     if (await search.count()) {
       await search.fill('data');
       await page.waitForTimeout(900); // 500ms debounce + fetch
       await shot('05-after-filter');
-      report.filteredRowCount = await page.locator('sa-datagrid-row').count();
+      report.filteredRowCount = await page.locator('.sa-content sa-datagrid-row >> visible=true').count();
       await search.fill('');
       await page.waitForTimeout(900);
     }
 
     // Reference field resolves to a name, not a raw id
-    report.referenceFieldText = await page.locator('sa-reference-field').first().textContent().catch(() => null);
+    report.referenceFieldText = await page
+      .locator('.sa-content sa-datagrid-row sa-reference-field >> visible=true')
+      .first()
+      .textContent()
+      .catch(() => null);
 
     // Create form: submit empty (expect validation errors), then fill + save
     await page.goto(`${baseUrl}/examples/${name}/index.html#/posts/create`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     await shot('06-create-form');
 
-    const saveBtn = page.locator('sa-save-button button, button:has-text("Save")').first();
+    const saveBtn = page.locator('.sa-content sa-save-button >> visible=true').first();
     if (await saveBtn.count()) {
       await saveBtn.click();
       await page.waitForTimeout(500);
-      report.validationErrorText = await page.locator('.sa-input__error').first().textContent().catch(() => null);
+      // First NON-EMPTY error span: every input renders an (empty) error span, so a plain first
+      // match can be an errorless input's blank span.
+      const errorTexts = await page.locator('.sa-content .sa-input__error').allTextContents();
+      report.validationErrorText = errorTexts.map((t) => t.trim()).find(Boolean) || null;
       await shot('07-validation-errors');
     }
 
-    const titleInput = page.locator('sa-text-input input').first();
+    const titleInput = page.locator('.sa-content sa-text-input input >> visible=true').first();
     if (await titleInput.count()) await titleInput.fill('Verification smoke test post');
     if (await saveBtn.count()) {
       await saveBtn.click();
@@ -100,15 +112,15 @@ async function verifyExample(browser, name) {
     // Bulk delete
     await page.goto(`${baseUrl}/examples/${name}/index.html#/posts`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1200);
-    const checkbox = page.locator('sa-datagrid-row input[type="checkbox"]').first();
+    const checkbox = page.locator('.sa-content sa-datagrid-row input[type="checkbox"] >> visible=true').first();
     if (await checkbox.count()) {
       await checkbox.check();
-      const bulkBtn = page.locator('sa-bulk-delete-button button, sa-bulk-delete-button').first();
+      const bulkBtn = page.locator('.sa-content sa-bulk-delete-button >> visible=true').first();
       if (await bulkBtn.count()) {
         await bulkBtn.click();
         await page.waitForTimeout(1000);
         await shot('09-after-bulk-delete');
-        report.rowCountAfterBulkDelete = await page.locator('sa-datagrid-row').count();
+        report.rowCountAfterBulkDelete = await page.locator('.sa-content sa-datagrid-row >> visible=true').count();
       }
     }
   } catch (e) {

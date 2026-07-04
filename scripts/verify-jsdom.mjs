@@ -163,11 +163,20 @@ async function main() {
   navigate('#/posts');
   await sleep(300); // initial getList + reference batching
 
-  const rows = () => adminEl.querySelectorAll('sa-datagrid-row');
+  // Only rows of the MOUNTED view — parked resources' lists render rows too.
+  const rows = () => adminEl.querySelectorAll('.sa-content sa-datagrid-row');
   check('list loads rows from the mock data provider', rows().length > 0, `${rows().length} rows`);
 
-  const refCell = adminEl.querySelector('sa-reference-field');
-  const refText = refCell ? refCell.textContent.trim() : null;
+  // Scope to a rendered datagrid row: the admin subtree also contains parked view templates
+  // (hidden authored host, non-active sibling views) whose reference fields render nothing.
+  // Reference resolution is a batched async fetch AFTER row render — poll briefly instead of
+  // assuming one fixed sleep covers it.
+  let refText = null;
+  for (let attempt = 0; attempt < 20 && !refText; attempt++) {
+    const refCell = adminEl.querySelector('sa-datagrid-row sa-reference-field');
+    refText = refCell ? refCell.textContent.trim() : null;
+    if (!refText) await sleep(100);
+  }
   const looksLikeName = !!refText && !/^\d+$/.test(refText);
   check('reference field resolves to author name, not raw id', looksLikeName, JSON.stringify(refText));
 
@@ -202,7 +211,11 @@ async function main() {
   };
   clickSave();
   await sleep(100);
-  const errorText = document.querySelector('.sa-input__error')?.textContent?.trim();
+  // First NON-EMPTY error span: every input renders an (empty) error span, and document order
+  // can put an errorless input's span first.
+  const errorText = [...document.querySelectorAll('.sa-input__error')]
+    .map((n) => n.textContent.trim())
+    .find(Boolean);
   check('submitting empty required field shows a validation error', !!errorText, JSON.stringify(errorText));
 
   const titleInput = document.querySelector('sa-text-input input');
@@ -219,15 +232,23 @@ async function main() {
 
   // ---- Bulk delete ----
   await sleep(300);
-  const firstCheckbox = document.querySelector('sa-datagrid-row input[type="checkbox"]');
+  // Scope to the MOUNTED list (.sa-content): parked resources' lists also render rows and a
+  // bulk button, and they come first in document order.
+  const firstCheckbox = document.querySelector('.sa-content sa-datagrid-row input[type="checkbox"]');
   const rowCountBeforeDelete = rows().length;
   firstCheckbox.checked = true;
   firstCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
   await sleep(50);
-  const bulkBtn = document.querySelector('sa-bulk-delete-button button') || document.querySelector('sa-bulk-delete-button');
+  const bulkBtn =
+    document.querySelector('.sa-content sa-bulk-delete-button button') ||
+    document.querySelector('.sa-content sa-bulk-delete-button');
+  // Assert on the provider's total, not the rendered row count: with more records than the
+  // page size, the post-delete refetch renders a full page again and the row count is unchanged.
+  const totalBeforeDelete = (await dataProvider.getList('posts', { pagination: { page: 1, perPage: 100 }, sort: { field: 'id', order: 'ASC' }, filter: {} })).total;
   bulkBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(400);
-  check('bulk delete removes the selected row', rows().length === rowCountBeforeDelete - 1, `before=${rowCountBeforeDelete} after=${rows().length}`);
+  const totalAfterDelete = (await dataProvider.getList('posts', { pagination: { page: 1, perPage: 100 }, sort: { field: 'id', order: 'ASC' }, filter: {} })).total;
+  check('bulk delete removes the selected row', totalAfterDelete === totalBeforeDelete - 1, `total before=${totalBeforeDelete} after=${totalAfterDelete} (rows rendered: ${rowCountBeforeDelete} -> ${rows().length})`);
 
   // ---- Diagnostics: deliberately misconfigure an element and confirm a graceful warning ----
   const errCountBefore = consoleErrors.length;
