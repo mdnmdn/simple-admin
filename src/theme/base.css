@@ -81,8 +81,9 @@
   gap: calc(var(--sa-spacing) * 1);
   padding: calc(var(--sa-spacing) * 3);
   min-width: 14rem;
-  background: var(--sa-muted, var(--muted, #f4f4f5));
-  border-right: 1px solid var(--sa-border, var(--border, #e5e7eb));
+  background: var(--sa-sidebar, var(--sidebar, var(--sa-muted, var(--muted, #f4f4f5))));
+  border-right: 1px solid
+    var(--sa-sidebar-border, var(--sidebar-border, var(--sa-border, var(--border, #e5e7eb))));
 }
 
 .sa-menu-item {
@@ -312,7 +313,7 @@ table.sa-datagrid,
 [class*='sa-'] select,
 [class*='sa-'] textarea {
   padding: calc(var(--sa-spacing) * 2) calc(var(--sa-spacing) * 3);
-  border: 1px solid var(--sa-border, var(--border, #e5e7eb));
+  border: 1px solid var(--sa-input, var(--input, var(--sa-border, var(--border, #e5e7eb))));
   border-radius: var(--sa-radius);
   background: var(--sa-background, var(--background, #fff));
   color: var(--sa-foreground, var(--foreground, #09090b));
@@ -461,7 +462,8 @@ table.sa-datagrid,
   width: 100%;
   max-width: 24rem;
   padding: calc(var(--sa-spacing) * 8);
-  background: var(--sa-background, var(--background, #fff));
+  background: var(--sa-card, var(--card, var(--sa-background, var(--background, #fff))));
+  color: var(--sa-card-foreground, var(--card-foreground, var(--sa-foreground, var(--foreground, #09090b))));
   border: 1px solid var(--sa-border, var(--border, #e5e7eb));
   border-radius: var(--sa-radius);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
